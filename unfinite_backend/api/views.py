@@ -1,32 +1,47 @@
-import json
+import json, requests
 from django.contrib.auth import authenticate, login, logout
 from django.http import JsonResponse
-from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt, get_token
 from django.views.decorators.http import require_POST
 from .models import UnfiniteUser
+from django.conf import settings
+from django_ratelimit.decorators import ratelimit
+
+def requires_authentication(func):
+
+    def wrap(request):
+
+        if not request.user.is_authenticated:
+            return JsonResponse({'detail': 'Unauthenticated.'}, status=400)
+        
+        return func(request)
+
+    return wrap
+
+@ensure_csrf_cookie
+def get_csrf_cookie(request):
+    return JsonResponse({}, status=200)
 
 @require_POST
 def login_view(request):
     data = json.loads(request.body)
-    username = data.get('username')
+    email = data.get('email')
     password = data.get('password')
 
-    if username is None or password is None:
-        return JsonResponse({'detail': 'Please provide username and password.'}, status=400)
+    if email is None or password is None:
+        return JsonResponse({'detail': 'One or more required fields are empty'}, status=400)
 
-    user = authenticate(username=username, password=password)
+    user = authenticate(email=email, password=password)
 
     if user is None:
-        return JsonResponse({'detail': 'Invalid credentials.'}, status=400)
+        return JsonResponse({'detail': 'Invalid credentials.'}, status=403)
 
     login(request, user)
     return JsonResponse({'detail': 'Successfully logged in.'})
 
-
+@require_POST
+@requires_authentication
 def logout_view(request):
-    if not request.user.is_authenticated:
-        return JsonResponse({'detail': 'You\'re not logged in.'}, status=400)
-
     logout(request)
     return JsonResponse({'detail': 'Successfully logged out.'})
 
@@ -40,10 +55,10 @@ def register_view(request):
     last_name = data.get("last_name")
 
     if any(map(lambda x: x == None, [email, password, first_name, last_name])):
-        return JsonResponse({'detail': 'One or more fields are empty.'}, status=400)
+        return JsonResponse({'detail': 'One or more required fields are empty'}, status=400)
 
     if UnfiniteUser.objects.filter(email=email).exists():
-        return JsonResponse({'detail': 'Email associated with existing account.'}, status=400)
+        return JsonResponse({'detail': 'Email associated with an existing account.'}, status=400)
 
     user = UnfiniteUser.objects.create_user(email=email, password=password, first_name=first_name, last_name=last_name)
     
@@ -58,3 +73,35 @@ def session_view(request):
     return JsonResponse({'isAuthenticated': True})
 
 # now, in future views, use request.user.is_authenticated to check if the user is authenticated
+
+@require_POST
+@requires_authentication
+@ratelimit(key='user', rate='1/10s') # limits authenticated users to one query per ten seconds. This may need adjusting. Prevents blatant abuse of the endpoint.
+def query(request):
+
+    data = json.loads(request.body)
+    query_text = data.get('query_text')
+
+    if query_text == None:
+        return JsonResponse({'detail': 'Bad request, query_text not provided.'}, status=400)
+
+    query_text = query_text.strip()
+
+    if query_text == '':
+        return JsonResponse({'detail': 'Bad request, query_text empty.'}, status=400)
+    
+    # eventually, make a django config variable corresponding to the queryhandler url
+    response = requests.post('http://127.0.0.1:8000/queryhandler/query/', headers={'Authorization':settings.QUERYHANDLER_KEY}, json={'query_text': query_text})
+
+    if response.status_code != 200:
+        return JsonResponse(data={'detail':'Query failed'}, status=500)
+
+    skeleton = response.json()['skeleton']
+
+    return JsonResponse(data={'skeleton': json.dumps(skeleton)}, status=200)
+    
+
+
+def test(request):
+    response = requests.post('http://127.0.0.1:8000/queryhandler/test/', headers={'Authorization':settings.QUERYHANDLER_KEY}, data={'detail':'some sensitive stuff'})
+    return JsonResponse(response.json())

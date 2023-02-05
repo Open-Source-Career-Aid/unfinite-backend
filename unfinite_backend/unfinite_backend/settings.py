@@ -11,6 +11,9 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 """
 
 from pathlib import Path
+from dotenv import load_dotenv
+import os, openai
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,6 +24,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-($lmox_2f&n4d85n9becwy26(@4=b7rc&*#+!5-aff7vi$u(+e'
+
+# key for authentication between api and queryhandler
+QUERYHANDLER_KEY = str(os.getenv('QUERYHANDLER_KEY'))
+
+# get openai api key
+OPENAI_API_KEY = str(os.getenv('OPENAI_API_KEY'))
+
+# NOTE: hopefully default cache is fine for django-ratelimit?
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -47,6 +58,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'api',
+    'queryhandler',
 ]
 
 MIDDLEWARE = [
