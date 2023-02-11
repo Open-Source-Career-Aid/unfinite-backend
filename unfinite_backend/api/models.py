@@ -52,4 +52,11 @@ class UnfiniteUser(AbstractUser):
 
 class Learner(models.Model):
     user = models.OneToOneField(UnfiniteUser, on_delete=models.CASCADE, primary_key=True)
-    
+
+class BetaKey(models.Model):
+
+    user_email = models.EmailField(_('email address'), unique=True)
+    key = models.CharField(max_length=64)
+
+    def validate_key(self, candidate_key):
+        return self.key == candidate_key

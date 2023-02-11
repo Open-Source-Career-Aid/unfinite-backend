@@ -7,7 +7,7 @@ def query_generation_model(model, query_topic):
     openai.api_key = settings.OPENAI_API_KEY
 
     prompt = f"""List, as key-phrases, the most necessary sub-topics required to learn about '{query_topic}', 
-               in order of importance. The following output is semi-colon seperated:"""
+               in order of importance. The following output is semicolon seperated:"""
     
     temperature = 0.2
     max_tokens = 100

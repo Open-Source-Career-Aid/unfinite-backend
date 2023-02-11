@@ -3,7 +3,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.http import JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt, get_token
 from django.views.decorators.http import require_POST
-from .models import UnfiniteUser
+from .models import UnfiniteUser, BetaKey
 from django.conf import settings
 from django_ratelimit.decorators import ratelimit
 
@@ -53,12 +53,24 @@ def register_view(request):
     confirm_password = data.get("cfm_password")
     first_name = data.get("first_name")
     last_name = data.get("last_name")
+    beta_key = data.get("beta_key")
 
     if any(map(lambda x: x == None, [email, password, first_name, last_name])):
         return JsonResponse({'detail': 'One or more required fields are empty'}, status=400)
 
     if UnfiniteUser.objects.filter(email=email).exists():
         return JsonResponse({'detail': 'Email associated with an existing account.'}, status=400)
+
+    key_objs = BetaKey.objects.filter(user_email=email)
+
+    if len(key_objs) != 1:
+        return JsonResponse({'detail': 'Not an approved beta user.'}, status=400)
+
+    if not key_objs[0].validate_key(beta_key):
+        return JsonResponse({'detail': 'Wrong registration key.'}, status=400)
+
+    # to delete the key after use, or not: that is the question...
+    key_objs[0].delete()
 
     user = UnfiniteUser.objects.create_user(email=email, password=password, first_name=first_name, last_name=last_name)
     
@@ -99,8 +111,6 @@ def query(request):
     skeleton = response.json()['skeleton']
 
     return JsonResponse(data={'skeleton': json.dumps(skeleton)}, status=200)
-    
-
 
 def test(request):
     response = requests.post('http://127.0.0.1:8000/queryhandler/test/', headers={'Authorization':settings.QUERYHANDLER_KEY}, data={'detail':'some sensitive stuff'})
