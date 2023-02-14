@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
 
 # Create your models here.
 
@@ -41,6 +42,8 @@ class UserManager(BaseUserManager):
 class UnfiniteUser(AbstractUser):
     is_staff = models.BooleanField(default=False)
     is_learner = models.BooleanField(default=False)
+    is_beta = models.BooleanField(default=False)
+    register_date = models.DateField(auto_now=True)
 
     username = None
     email = models.EmailField(_('email address'), unique=True)
@@ -50,8 +53,8 @@ class UnfiniteUser(AbstractUser):
 
     objects = UserManager()
 
-class Learner(models.Model):
-    user = models.OneToOneField(UnfiniteUser, on_delete=models.CASCADE, primary_key=True)
+# class Learner(models.Model):
+#     user = models.OneToOneField(UnfiniteUser, on_delete=models.CASCADE, primary_key=True)
 
 class BetaKey(models.Model):
 
@@ -60,3 +63,69 @@ class BetaKey(models.Model):
 
     def validate_key(self, candidate_key):
         return self.key == candidate_key
+
+class Query(models.Model):
+    user = models.OneToOneField(UnfiniteUser, on_delete=models.PROTECT, primary_key=False)
+    query_text = models.TextField()
+    skeleton = models.TextField()
+    num_tokens = models.IntegerField()
+    num_searched = models.IntegerField(default=1)
+    
+    created = models.DateField()
+    updated = models.DateField()
+
+    def save(self, *args, **kwargs):
+        ''' On save, update timestamps '''
+        if not self.id:
+            self.created = timezone.now()
+        self.updated = timezone.now()
+        return super(Query, self).save(*args, **kwargs)
+
+class Feedback(models.Model):
+    user = models.OneToOneField(UnfiniteUser, on_delete=models.PROTECT, primary_key=False)
+    query = models.ForeignKey(Query, on_delete=models.PROTECT)
+    text = models.TextField()
+
+    THUMBUP = 'TU'
+    THUMBDOWN = 'TD'
+    THUMBNEUTRAL = 'TN'
+    THUMB_CHOICES = [(THUMBUP, 'Thumbs-up'), (THUMBDOWN, 'Thumbds-down'), (THUMBNEUTRAL, 'Neutral')]
+
+    rating = models.CharField(max_length=2, choices=THUMB_CHOICES, default=THUMBNEUTRAL)
+
+    created = models.DateField()
+    updated = models.DateField()
+
+    def save(self, *args, **kwargs):
+        ''' On save, update timestamps '''
+        if not self.id:
+            self.created = timezone.now()
+        self.updated = timezone.now()
+        return super(Feedback, self).save(*args, **kwargs)
+
+class SERP(models.Model):
+    search_string = models.TextField()
+    queries = models.ManyToManyField(Query)
+    created = models.DateField()
+    updated = models.DateField()
+
+    def save(self, *args, **kwargs):
+        ''' On save, update timestamps '''
+        if not self.id:
+            self.created = timezone.now()
+        self.updated = timezone.now()
+        return super(SERP, self).save(*args, **kwargs)
+
+class SERPItem(models.Model):
+    serp = models.ForeignKey(SERP, on_delete=models.CASCADE)
+    title = models.TextField()
+    url = models.URLField()
+    created = models.DateField()
+    updated = models.DateField()
+
+    def save(self, *args, **kwargs):
+        ''' On save, update timestamps '''
+        if not self.id:
+            self.created = timezone.now()
+        self.updated = timezone.now()
+        return super(SERPItem, self).save(*args, **kwargs) 

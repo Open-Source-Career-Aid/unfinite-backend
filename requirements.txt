@@ -1,3 +1,5 @@
 django==4.1.5
 django_ratelimit
 openai
+bs4
+requests

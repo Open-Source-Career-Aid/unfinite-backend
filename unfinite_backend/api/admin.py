@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.utils.translation import gettext_lazy as _
-from .models import UnfiniteUser, BetaKey
+from .models import *
 
 # Register your models here.
 @admin.register(UnfiniteUser)
@@ -29,3 +29,7 @@ class UserAdmin(DjangoUserAdmin):
 @admin.register(BetaKey)
 class BetaKeyAdmin(admin.ModelAdmin):
     list_display = ('user_email',)
+
+@admin.register(Query)
+class QueryAdmin(admin.ModelAdmin):
+    list_display = ('query_text', 'user', 'num_tokens', 'num_searched')

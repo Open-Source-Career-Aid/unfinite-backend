@@ -73,7 +73,8 @@ def register_view(request):
     key_objs[0].delete()
 
     user = UnfiniteUser.objects.create_user(email=email, password=password, first_name=first_name, last_name=last_name)
-    
+    user.is_beta = True
+    user.save()
     login(request, user)
     return JsonResponse({'detail': 'Successfully registered.'})
 
@@ -103,7 +104,7 @@ def query(request):
         return JsonResponse({'detail': 'Bad request, query_text empty.'}, status=400)
     
     # eventually, make a django config variable corresponding to the queryhandler url
-    response = requests.post('http://127.0.0.1:8000/queryhandler/query/', headers={'Authorization':settings.QUERYHANDLER_KEY}, json={'query_text': query_text})
+    response = requests.post('http://127.0.0.1:8000/queryhandler/query/', headers={'Authorization':settings.QUERYHANDLER_KEY}, json={'query_text': query_text, 'user_id': request.user.id})
 
     if response.status_code != 200:
         return JsonResponse(data={'detail':'Query failed'}, status=500)

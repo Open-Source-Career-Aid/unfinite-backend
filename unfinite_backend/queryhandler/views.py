@@ -34,4 +34,5 @@ def query(request):
         assumes query_text is a field of request.body, and that it's not empty and stuff <- make this precise.
         this means that stuff related to the validity of the query_text should be handled in the API endpoint that this gets POSTed from.
     '''
-    return query_generation_model('text-davinci-003', json.loads(request.body).get('query_text'))
+    d = json.loads(request.body)
+    return query_generation_model('text-davinci-003', d.get('query_text'), d.get('user_id'))
