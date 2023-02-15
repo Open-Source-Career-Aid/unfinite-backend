@@ -65,7 +65,7 @@ class BetaKey(models.Model):
         return self.key == candidate_key
 
 class Query(models.Model):
-    user = models.OneToOneField(UnfiniteUser, on_delete=models.PROTECT, primary_key=False)
+    user = models.ForeignKey(UnfiniteUser, on_delete=models.PROTECT)
     query_text = models.TextField()
     skeleton = models.TextField()
     num_tokens = models.IntegerField()
@@ -106,6 +106,7 @@ class Feedback(models.Model):
 class SERP(models.Model):
     search_string = models.TextField()
     queries = models.ManyToManyField(Query)
+    entries = models.TextField()
     created = models.DateField()
     updated = models.DateField()
 

@@ -109,10 +109,27 @@ def query(request):
     if response.status_code != 200:
         return JsonResponse(data={'detail':'Query failed'}, status=500)
 
-    skeleton = response.json()['skeleton']
+    r = response.json()
 
-    return JsonResponse(data={'skeleton': json.dumps(skeleton)}, status=200)
+    return JsonResponse(data=r, status=200)
 
-def test(request):
-    response = requests.post('http://127.0.0.1:8000/queryhandler/test/', headers={'Authorization':settings.QUERYHANDLER_KEY}, data={'detail':'some sensitive stuff'})
-    return JsonResponse(response.json())
+@require_POST
+@requires_authentication
+@ratelimit(key='user', rate='1/10s')
+def search(request):
+
+    data = json.loads(request.body)
+    query_id = data.get('id')
+    topic_num = data.get('topic')
+
+    if query_id is None or topic_num is None:
+        return JsonResponse(data={'detail':'Missing query_id or topic'}, status=400)
+
+    response = requests.post('http://127.0.0.1:8000/queryhandler/search/', headers={'Authorization':settings.QUERYHANDLER_KEY}, json=data)
+
+    if response.status_code != 200:
+        return JsonResponse(data={'detail':'Search failed'}, status=500)
+
+    r = response.json()
+
+    return JsonResponse(data=r, status=200)

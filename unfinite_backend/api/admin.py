@@ -33,3 +33,7 @@ class BetaKeyAdmin(admin.ModelAdmin):
 @admin.register(Query)
 class QueryAdmin(admin.ModelAdmin):
     list_display = ('query_text', 'user', 'num_tokens', 'num_searched')
+
+@admin.register(SERP)
+class SERPAdmin(admin.ModelAdmin):
+    list_display = ('search_string',)
