@@ -3,3 +3,4 @@ django_ratelimit
 openai
 bs4
 requests
+django-cors-headers

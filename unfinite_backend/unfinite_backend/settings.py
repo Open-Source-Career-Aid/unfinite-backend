@@ -31,6 +31,10 @@ QUERYHANDLER_KEY = str(os.getenv('QUERYHANDLER_KEY'))
 # get openai api key
 OPENAI_API_KEY = str(os.getenv('OPENAI_API_KEY'))
 
+# CORS
+CORS_ALLOW_CREDENTIALS = True
+CORS_ORIGIN_WHITELIST = ['http://localhost:3000'] # For development of the front-end. Will be https://app.unfinite.co
+
 # NOTE: hopefully default cache is fine for django-ratelimit?
 
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -42,6 +46,8 @@ CSRF_COOKIE_SAMESITE = 'Strict'
 SESSION_COOKIE_SAMESITE = 'Strict'
 CSRF_COOKIE_HTTPONLY = False  # if frontend served seperately, this is True
 SESSION_COOKIE_HTTPONLY = True
+
+CSRF_TRUSTED_ORIGINS = ['http://localhost:3000'] # For dev. prod: https://app.unfinite.co
 
 # Enable for production, forces HTTPS for cookies:
 # CSRF_COOKIE_SECURE = True
@@ -57,12 +63,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders', # For CORS stuff
     'api',
     'queryhandler',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware', # CORS stuff
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
