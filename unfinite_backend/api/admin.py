@@ -3,10 +3,11 @@ from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.utils.translation import gettext_lazy as _
 from .models import *
 
-# Register your models here.
+
 @admin.register(UnfiniteUser)
 class UserAdmin(DjangoUserAdmin):
-
+    # since we made a child class of the Django AbstractUser, which we want to use as the 
+    # default user object representation, add an admin page for it. Won't show up otherwise.
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
         (_('Personal info'), {'fields': ('first_name', 'last_name')}),
@@ -26,8 +27,12 @@ class UserAdmin(DjangoUserAdmin):
     search_fields = ('email', 'first_name', 'last_name')
     ordering = ('email',)
 
+# below, are the admin pages for other Models. TODO: make them more useful.
+
 @admin.register(BetaKey)
 class BetaKeyAdmin(admin.ModelAdmin):
+    # TODO: allow upload of CSV with emails to generate keys with. See unfinite_backend/add_beta_keys.py
+    # which does the same thing.
     list_display = ('user_email',)
 
 @admin.register(Query)

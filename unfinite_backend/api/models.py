@@ -48,7 +48,7 @@ class UnfiniteUser(AbstractUser):
     username = None
     email = models.EmailField(_('email address'), unique=True)
 
-    USERNAME_FIELD = 'email'
+    USERNAME_FIELD = 'email' # users are identified by unique emails, not usernames
     REQUIRED_FIELDS = []
 
     objects = UserManager()
@@ -58,6 +58,10 @@ class UnfiniteUser(AbstractUser):
 
 class BetaKey(models.Model):
 
+    # this object links a to-be-registered user with a one-time-use key
+    # such that only users with a key can register. The BetaKey object linking
+    # a user (email) and a key is deleted after the user registers.
+
     user_email = models.EmailField(_('email address'), unique=True)
     key = models.CharField(max_length=64)
 
@@ -65,6 +69,12 @@ class BetaKey(models.Model):
         return self.key == candidate_key
 
 class Query(models.Model):
+
+    # Every time a user makes a unique query, a new Query object is created
+    # The object stores the query text, the skeleton returned from an LLM,
+    # the number of tokens used (for cost tracking purposes), and the number
+    # of times the query was searched.
+
     user = models.ForeignKey(UnfiniteUser, on_delete=models.PROTECT)
     query_text = models.TextField()
     skeleton = models.TextField()
@@ -74,6 +84,10 @@ class Query(models.Model):
     created = models.DateField()
     updated = models.DateField()
 
+    def searched(self):
+        self.num_searched += 1
+        return super(Query, self).save()
+
     def save(self, *args, **kwargs):
         ''' On save, update timestamps '''
         if not self.id:
@@ -82,6 +96,9 @@ class Query(models.Model):
         return super(Query, self).save(*args, **kwargs)
 
 class Feedback(models.Model):
+
+    # This hasn't been used yet. TODO: Refine/implement
+
     user = models.OneToOneField(UnfiniteUser, on_delete=models.PROTECT, primary_key=False)
     query = models.ForeignKey(Query, on_delete=models.PROTECT)
     text = models.TextField()
@@ -104,6 +121,11 @@ class Feedback(models.Model):
         return super(Feedback, self).save(*args, **kwargs)
 
 class SERP(models.Model):
+
+    # Stores search results related to a search string. Relates to queries that 
+    # triggered the search. entries contains a JSON encoding of a list of 
+    # url-title pairs of search results
+
     search_string = models.TextField()
     queries = models.ManyToManyField(Query)
     entries = models.TextField()
@@ -118,6 +140,9 @@ class SERP(models.Model):
         return super(SERP, self).save(*args, **kwargs)
 
 class SERPItem(models.Model):
+
+    # No longer used, TODO: Delete
+
     serp = models.ForeignKey(SERP, on_delete=models.CASCADE)
     title = models.TextField()
     url = models.URLField()
