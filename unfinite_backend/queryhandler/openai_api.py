@@ -30,12 +30,11 @@ def query_generation_model(model, query_topic, user_id):
     openai.api_key = settings.OPENAI_API_KEY
 
     # the prompt to be used to generate the skeleton/roadmap
-    prompt = f"""List, as key-phrases, the most necessary sub-topics required to learn about '{query_topic}', 
-               in order of importance. The following output is semicolon-seperated:"""
+    prompt = f"""List, as key phrases, the most necessary topics pertaining to the following guiding question: '{query_topic}'. The following is semicolon-separated and ranked in order of importance:"""
     
     # model decoding parameters
     temperature = 0.2
-    max_tokens = 100
+    max_tokens = 250
     model = 'text-davinci-003'
 
     # making API request and error checking
