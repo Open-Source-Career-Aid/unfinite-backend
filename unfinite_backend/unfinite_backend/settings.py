@@ -41,7 +41,7 @@ CORS_ORIGIN_WHITELIST = ['http://localhost:3000'] # For development of the front
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['api.unfinite.co', 'localhost']
 
 CSRF_COOKIE_SAMESITE = 'Strict'
 SESSION_COOKIE_SAMESITE = 'Strict'
