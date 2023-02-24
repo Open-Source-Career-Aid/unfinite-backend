@@ -2,7 +2,9 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.utils.translation import gettext_lazy as _
 from .models import *
-
+from import_export import resources
+from import_export.admin import ImportExportMixin
+import secrets
 
 @admin.register(UnfiniteUser)
 class UserAdmin(DjangoUserAdmin):
@@ -29,11 +31,35 @@ class UserAdmin(DjangoUserAdmin):
 
 # below, are the admin pages for other Models. TODO: make them more useful.
 
-@admin.register(BetaKey)
-class BetaKeyAdmin(admin.ModelAdmin):
-    # TODO: allow upload of CSV with emails to generate keys with. See unfinite_backend/add_beta_keys.py
-    # which does the same thing.
+#@admin.register(BetaKey)
+#class BetaKeyAdmin(admin.ModelAdmin):
+#    # TODO: allow upload of CSV with emails to generate keys with. See unfinite_backend/add_beta_keys.py
+#    # which does the same thing.
+#    list_display = ('user_email',)
+
+class BetaKeyEmailResource(resources.ModelResource):
+
+    def before_save_instance(self, instance, using_transactions, dry_run):
+        instance.key = secrets.token_urlsafe(32)
+
+    class Meta:
+        model = BetaKey
+        import_id_fields = ('user_email',)
+        fields = ('user_email',)
+
+class BetaKeyResource(resources.ModelResource):
+
+    class Meta:
+        model = BetaKey
+        export_id_fields = ('user_email',)
+        fields = ('user_email','key',)
+
+class CustomBetaKeyAdmin(ImportExportMixin, admin.ModelAdmin):
+    resource_classes = [BetaKeyEmailResource, BetaKeyResource]
+
     list_display = ('user_email',)
+
+admin.site.register(BetaKey, CustomBetaKeyAdmin)
 
 @admin.register(Query)
 class QueryAdmin(admin.ModelAdmin):
