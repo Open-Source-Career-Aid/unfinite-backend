@@ -18,6 +18,12 @@ def requires_authentication(func):
 
     return wrap
 
+def is_authenticated(request):
+    if request.user.is_authenticated:
+        return JsonResponse({'is_authenticated': True}, status=200)
+
+    return JsonResponse({'is_authenticated': False}, status=200)
+
 @csrf_exempt
 def get_csrf_cookie(request):
     # a nice little function that the front-end can use to get a CSRF token if

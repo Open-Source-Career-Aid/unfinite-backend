@@ -9,4 +9,5 @@ urlpatterns = [
     path('register/', views.register_view, name='api-register'),
     path('query/', views.query, name='api-query'),
     path('search/', views.search, name='api-search'),
+    path('is_authenticated/', views.is_authenticated, name='api-is-authenticated'),
 ]

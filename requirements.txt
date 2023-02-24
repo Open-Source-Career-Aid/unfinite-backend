@@ -4,3 +4,4 @@ openai
 bs4
 requests
 django-cors-headers
+django-import-export
