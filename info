@@ -1,0 +1,13 @@
+gunicorn socket specified at: /etc/systemd/system/gunicorn.socket
+gunicorn service specified at: /etc/systemd/system/gunicorn.service
+
+to start/enable:
+sudo systemctl start gunicorn.socket
+sudo systemctl enable gunicorn.socket
+
+socket file at: /run/gunicorn.sock
+
+nginx site at /etc/nginx/sites-available/unfinite_backend
+
+use systemctl restart nginx after changes
+
