@@ -18,7 +18,7 @@ load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-STATIC_ROOT= '/var/opt/static/'
+STATIC_ROOT= os.path.join(BASE_DIR,'static/')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
@@ -39,7 +39,7 @@ CORS_ORIGIN_WHITELIST = ['http://localhost:3000'] # For development of the front
 # NOTE: hopefully default cache is fine for django-ratelimit?
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ['api.unfinite.co', 'localhost', '3.19.61.62']
 
