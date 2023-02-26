@@ -20,6 +20,7 @@ def requires_authentication(func):
 
 def is_authenticated(request):
     if request.user.is_authenticated:
+        print("is_authenticated: true")
         return JsonResponse({'is_authenticated': True}, status=200)
 
     return JsonResponse({'is_authenticated': False}, status=200)
@@ -28,7 +29,9 @@ def is_authenticated(request):
 def get_csrf_cookie(request):
     # a nice little function that the front-end can use to get a CSRF token if
     # it needs to. Might not be needed.
-    return JsonResponse({'csrfToken': get_token(request)}, status=200)
+    t = get_token(request)
+    print(t)
+    return JsonResponse({'csrfToken': t}, status=200)
 
 @require_POST
 def login_view(request):

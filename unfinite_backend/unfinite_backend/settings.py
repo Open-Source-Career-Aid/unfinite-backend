@@ -41,12 +41,14 @@ CORS_ORIGIN_WHITELIST = ['http://localhost:3000'] # For development of the front
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['api.unfinite.co', 'localhost', '3.19.61.62']
+ALLOWED_HOSTS = ['api.unfinite.co', 'localhost', '3.19.61.62', '127.0.0.1']
 
-CSRF_COOKIE_SAMESITE = 'Strict'
+#CSRF_COOKIE_SAMESITE = 'Strict'
 SESSION_COOKIE_SAMESITE = 'Strict'
-CSRF_COOKIE_HTTPONLY = False  # if frontend served seperately, this is True
+#CSRF_COOKIE_HTTPONLY = False  # if frontend served seperately, this is True
 SESSION_COOKIE_HTTPONLY = True
+
+#CSRF_HEADER_NAME = "HTTP_X_CSRFTOKEN"
 
 CSRF_TRUSTED_ORIGINS = ['http://localhost:3000'] # For dev. prod: https://app.unfinite.co
 
@@ -75,7 +77,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware', # CORS stuff
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    #'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
