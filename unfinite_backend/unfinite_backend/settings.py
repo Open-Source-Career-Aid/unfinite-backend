@@ -18,8 +18,10 @@ load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-STATIC_ROOT= os.path.join(BASE_DIR,'static/')
+STATIC_ROOT= '/var/opt/static/'
 
+STATICFILES_DIRS = [BASE_DIR / 'unfinitefront/unfinitebeta/build/static']
+#print(STATICFILE_DIRS)
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
 
@@ -41,7 +43,7 @@ CORS_ORIGIN_WHITELIST = ['http://localhost:3000'] # For development of the front
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['api.unfinite.co', 'localhost', '3.19.61.62', '127.0.0.1']
+ALLOWED_HOSTS = ['app.unfinite.co', 'localhost', '3.19.61.62', '127.0.0.1']
 
 #CSRF_COOKIE_SAMESITE = 'Strict'
 SESSION_COOKIE_SAMESITE = 'Strict'
@@ -74,6 +76,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     'corsheaders.middleware.CorsMiddleware', # CORS stuff
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -88,7 +91,7 @@ ROOT_URLCONF = 'unfinite_backend.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'unfinitefront/unfinitebeta/build'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -162,3 +165,5 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 AUTH_USER_MODEL = 'api.UnfiniteUser'
+
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
