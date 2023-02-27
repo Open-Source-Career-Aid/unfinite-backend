@@ -152,7 +152,7 @@ def query(request):
 
 @require_POST
 @requires_authentication
-@ratelimit(key='user', rate='1/10s')
+@ratelimit(key='user', rate='1/1s')
 def search(request):
 
     data = json.loads(request.body)
