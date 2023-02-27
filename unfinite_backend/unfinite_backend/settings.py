@@ -54,7 +54,7 @@ CSRF_TRUSTED_ORIGINS = ['http://localhost:3000'] # For dev. prod: https://app.un
 
 # Enable for production, forces HTTPS for cookies:
 # CSRF_COOKIE_SECURE = True
-# SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
 
 
 # Application definition
