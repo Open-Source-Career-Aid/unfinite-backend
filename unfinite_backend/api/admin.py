@@ -46,7 +46,7 @@ class BetaKeyEmailResource(resources.ModelResource):
     class Meta:
         model = BetaKey
         import_id_fields = ('user_email',)
-        fields = ('user_email',)
+        fields = ('user_email', 'key')
 
 class BetaKeyResource(resources.ModelResource):
 
