@@ -5,6 +5,7 @@ from .models import *
 from import_export import resources
 from import_export.admin import ImportExportMixin
 import secrets
+from django.forms import ModelForm
 
 @admin.register(UnfiniteUser)
 class UserAdmin(DjangoUserAdmin):
@@ -39,8 +40,8 @@ class UserAdmin(DjangoUserAdmin):
 
 class BetaKeyEmailResource(resources.ModelResource):
 
-    def before_save_instance(self, instance, using_transactions, dry_run):
-        instance.key = secrets.token_urlsafe(32)
+    #def before_save_instance(self, instance, using_transactions, dry_run):
+    #    instance.key = secrets.token_urlsafe(32)
 
     class Meta:
         model = BetaKey
@@ -54,10 +55,18 @@ class BetaKeyResource(resources.ModelResource):
         export_id_fields = ('user_email',)
         fields = ('user_email','key',)
 
+class BetaKeyForm(ModelForm):
+    class Meta:
+        model = BetaKey
+        exclude = ['key']
+
 class CustomBetaKeyAdmin(ImportExportMixin, admin.ModelAdmin):
     resource_classes = [BetaKeyEmailResource, BetaKeyResource]
 
     list_display = ('user_email',)
+    form = BetaKeyForm
+
+
 
 admin.site.register(BetaKey, CustomBetaKeyAdmin)
 

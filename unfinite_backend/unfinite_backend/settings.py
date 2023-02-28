@@ -18,7 +18,7 @@ load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-STATIC_ROOT= '/var/opt/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, str(os.getenv('REL_STATIC_ROOT')))
 
 STATICFILES_DIRS = [BASE_DIR / 'unfinitefront/unfinitebeta/build/static', BASE_DIR / 'unfinitefront/unfinitebeta/build/']
 #print(STATICFILE_DIRS)
@@ -41,7 +41,7 @@ CORS_ORIGIN_WHITELIST = ['http://localhost:3000'] # For development of the front
 # NOTE: hopefully default cache is fine for django-ratelimit?
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG')=="True"
 
 ALLOWED_HOSTS = ['app.unfinite.co', 'localhost', '3.19.61.62', '127.0.0.1']
 
@@ -56,7 +56,7 @@ CSRF_TRUSTED_ORIGINS = ['http://localhost:3000'] # For dev. prod: https://app.un
 
 # Enable for production, forces HTTPS for cookies:
 # CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = not DEBUG
 
 
 # Application definition
@@ -88,10 +88,14 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'unfinite_backend.urls'
 
+t = []
+if os.getenv("REACT_DIR") is not None:
+    t = [BASE_DIR / os.getenv("REACT_DIR")]
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'unfinitefront/unfinitebeta/build'],
+        'DIRS': t,
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -114,10 +118,10 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': os.getenv('DB_NAME'), #BASE_DIR / 'db.sqlite3',
-	'USER': os.getenv('DB_USER'),
-	'PASSWORD': os.getenv('DB_PASSWORD'), #put this stuff in .env
-	'HOST': os.getenv('DB_HOST'),
-	'PORT': '3306',
+	    'USER': os.getenv('DB_USER'),
+	    'PASSWORD': os.getenv('DB_PASSWORD'), #put this stuff in .env
+	    'HOST': os.getenv('DB_HOST'),
+	    'PORT': '3306',
     }
 }
 
