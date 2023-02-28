@@ -1,4 +1,6 @@
 #unfinite_backend/db.sqlite3
-*.pyc
-*.env
+**.pyc
+**.env
 /env
+unfinite_backend/unfinitefront
+unfinite_backend/unfinite_backend/.env
