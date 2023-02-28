@@ -38,15 +38,15 @@ class UserAdmin(DjangoUserAdmin):
 #    # which does the same thing.
 #    list_display = ('user_email',)
 
-# class BetaKeyEmailResource(resources.ModelResource):
+class BetaKeyEmailResource(resources.ModelResource):
 
-#     #def before_save_instance(self, instance, using_transactions, dry_run):
-#     #    instance.key = secrets.token_urlsafe(32)
+    #def before_save_instance(self, instance, using_transactions, dry_run):
+    #    instance.key = secrets.token_urlsafe(32)
 
-#     class Meta:
-#         model = BetaKey
-#         import_id_fields = ('user_email',)
-#         fields = ('user_email', 'key')
+    class Meta:
+        model = BetaKey
+        import_id_fields = ('user_email',)
+        fields = ('user_email')
 
 class BetaKeyResource(resources.ModelResource):
 
@@ -61,7 +61,7 @@ class BetaKeyForm(ModelForm):
         exclude = ['key']
 
 class CustomBetaKeyAdmin(ImportExportMixin, admin.ModelAdmin):
-    resource_classes = [BetaKeyResource]
+    resource_classes = [BetaKeyEmailResource, BetaKeyResource]
 
     list_display = ('user_email','key',)
     form = BetaKeyForm
