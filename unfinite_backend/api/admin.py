@@ -48,12 +48,12 @@ class BetaKeyEmailResource(resources.ModelResource):
         import_id_fields = ('user_email',)
         fields = ('user_email', 'key')
 
-class BetaKeyResource(resources.ModelResource):
+# class BetaKeyResource(resources.ModelResource):
 
-    class Meta:
-        model = BetaKey
-        export_id_fields = ('user_email',)
-        fields = ('user_email',)
+#     class Meta:
+#         model = BetaKey
+#         export_id_fields = ('user_email',)
+#         fields = ('user_email', 'key')
 
 class BetaKeyForm(ModelForm):
     class Meta:
@@ -61,7 +61,7 @@ class BetaKeyForm(ModelForm):
         exclude = ['key']
 
 class CustomBetaKeyAdmin(ImportExportMixin, admin.ModelAdmin):
-    resource_classes = [BetaKeyEmailResource, BetaKeyResource]
+    resource_classes = [BetaKeyResource]
 
     list_display = ('user_email','key',)
     form = BetaKeyForm
