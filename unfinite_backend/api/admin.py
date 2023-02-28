@@ -53,7 +53,7 @@ class BetaKeyResource(resources.ModelResource):
     class Meta:
         model = BetaKey
         export_id_fields = ('user_email',)
-        fields = ('user_email','key',)
+        fields = ('user_email',)
 
 class BetaKeyForm(ModelForm):
     class Meta:
@@ -63,7 +63,7 @@ class BetaKeyForm(ModelForm):
 class CustomBetaKeyAdmin(ImportExportMixin, admin.ModelAdmin):
     resource_classes = [BetaKeyEmailResource, BetaKeyResource]
 
-    list_display = ('user_email',)
+    list_display = ('user_email','key',)
     form = BetaKeyForm
 
 
