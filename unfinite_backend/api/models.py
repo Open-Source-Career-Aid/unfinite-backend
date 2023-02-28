@@ -2,6 +2,7 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
+import secrets
 
 # Create your models here.
 
@@ -63,7 +64,7 @@ class BetaKey(models.Model):
     # a user (email) and a key is deleted after the user registers.
 
     user_email = models.EmailField(_('email address'), unique=True)
-    key = models.CharField(max_length=64)
+    key = models.CharField(max_length=64, default=lambda: secrets.token_urlsafe(32))
 
     def validate_key(self, candidate_key):
         return self.key == candidate_key
