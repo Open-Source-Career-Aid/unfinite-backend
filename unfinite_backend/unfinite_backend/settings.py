@@ -20,7 +20,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 STATIC_ROOT= '/var/opt/static/'
 
-STATICFILES_DIRS = [BASE_DIR / 'unfinitefront/unfinitebeta/build/static']
+STATICFILES_DIRS = [BASE_DIR / 'unfinitefront/unfinitebeta/build/static', BASE_DIR / 'unfinitefront/unfinitebeta/build/']
 #print(STATICFILE_DIRS)
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
