@@ -63,7 +63,7 @@ class BetaKey(models.Model):
     # a user (email) and a key is deleted after the user registers.
 
     user_email = models.EmailField(_('email address'), unique=True)
-    key = models.CharField(max_length=64)
+    key = models.CharField(max_length=64, default=lambda: secrets.token_urlsafe(32))
 
     def validate_key(self, candidate_key):
         return self.key == candidate_key
@@ -95,31 +95,6 @@ class Query(models.Model):
         self.updated = timezone.now()
         return super(Query, self).save(*args, **kwargs)
 
-class Feedback(models.Model):
-
-    # This hasn't been used yet. TODO: Refine/implement
-
-    user = models.OneToOneField(UnfiniteUser, on_delete=models.PROTECT, primary_key=False)
-    query = models.ForeignKey(Query, on_delete=models.PROTECT)
-    text = models.TextField()
-
-    THUMBUP = 'TU'
-    THUMBDOWN = 'TD'
-    THUMBNEUTRAL = 'TN'
-    THUMB_CHOICES = [(THUMBUP, 'Thumbs-up'), (THUMBDOWN, 'Thumbds-down'), (THUMBNEUTRAL, 'Neutral')]
-
-    rating = models.CharField(max_length=2, choices=THUMB_CHOICES, default=THUMBNEUTRAL)
-
-    created = models.DateField()
-    updated = models.DateField()
-
-    def save(self, *args, **kwargs):
-        ''' On save, update timestamps '''
-        if not self.id:
-            self.created = timezone.now()
-        self.updated = timezone.now()
-        return super(Feedback, self).save(*args, **kwargs)
-
 class SERP(models.Model):
 
     # Stores search results related to a search string. Relates to queries that 
@@ -138,6 +113,44 @@ class SERP(models.Model):
             self.created = timezone.now()
         self.updated = timezone.now()
         return super(SERP, self).save(*args, **kwargs)
+
+class SERPFeedback(models.Model):
+    user = models.ForeignKey(UnfiniteUser, on_delete=models.PROTECT, primary_key=False)
+    query = models.ForeignKey(Query, on_delete=models.PROTECT)
+    serp = models.ForeignKey(SERP, on_delete=models.PROTECT)
+    resource = models.TextField()
+
+    THUMBUP = 'TU'
+    THUMBDOWN = 'TD'
+    THUMBNEUTRAL = 'TN'
+    THUMB_CHOICES = [(THUMBUP, 'Thumbs-up'), (THUMBDOWN, 'Thumbs-down'), (THUMBNEUTRAL, 'Neutral')]
+
+    rating = models.CharField(max_length=2, choices=THUMB_CHOICES, default=THUMBNEUTRAL)
+
+    created = models.DateField()
+    updated = models.DateField()
+
+    def save(self, *args, **kwargs):
+        ''' On save, update timestamps '''
+        if not self.id:
+            self.created = timezone.now()
+        self.updated = timezone.now()
+        return super(SERPFeedback, self).save(*args, **kwargs)
+
+class QueryFeedback(models.Model):
+    user = models.ForeignKey(UnfiniteUser, on_delete=models.PROTECT, primary_key=False)
+    query = models.ForeignKey(Query, on_delete=models.PROTECT)
+    text = models.TextField()
+
+    created = models.DateField()
+    updated = models.DateField()
+
+    def save(self, *args, **kwargs):
+        ''' On save, update timestamps '''
+        if not self.id:
+            self.created = timezone.now()
+        self.updated = timezone.now()
+        return super(QueryFeedback, self).save(*args, **kwargs)
 
 class SERPItem(models.Model):
 

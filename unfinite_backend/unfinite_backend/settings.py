@@ -18,7 +18,8 @@ load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-STATIC_ROOT= '/var/opt/static/'
+STATIC_ROOT= BASE_DIR / 'static/'
+#print(STATIC_ROOT)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
@@ -39,9 +40,9 @@ CORS_ORIGIN_WHITELIST = ['http://localhost:3000'] # For development of the front
 # NOTE: hopefully default cache is fine for django-ratelimit?
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
-ALLOWED_HOSTS = ['api.unfinite.co', 'localhost', '3.19.61.62']
+ALLOWED_HOSTS = ['api.unfinite.co', 'localhost', '3.19.61.62', '127.0.0.1']
 
 CSRF_COOKIE_SAMESITE = 'Strict'
 SESSION_COOKIE_SAMESITE = 'Strict'
@@ -75,7 +76,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware', # CORS stuff
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    #'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -107,12 +108,12 @@ WSGI_APPLICATION = 'unfinite_backend.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.getenv('DB_NAME'), #BASE_DIR / 'db.sqlite3',
-	'USER': os.getenv('DB_USER'),
-	'PASSWORD': os.getenv('DB_PASSWORD'), #put this stuff in .env
-	'HOST': os.getenv('DB_HOST'),
-	'PORT': '3306',
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+	#'USER': os.getenv('DB_USER'),
+	#'PASSWORD': os.getenv('DB_PASSWORD'), #put this stuff in .env
+	#'HOST': os.getenv('DB_HOST'),
+	#'PORT': '3306',
     }
 }
 
@@ -151,7 +152,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field

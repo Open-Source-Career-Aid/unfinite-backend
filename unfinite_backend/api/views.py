@@ -6,6 +6,7 @@ from django.views.decorators.http import require_POST
 from .models import UnfiniteUser, BetaKey
 from django.conf import settings
 from django_ratelimit.decorators import ratelimit
+from .models import Query, SERP, QueryFeedback, SERPFeedback
 
 def requires_authentication(func):
     # an nice little wrapper to require users to be logged in
@@ -28,7 +29,8 @@ def is_authenticated(request):
 def get_csrf_cookie(request):
     # a nice little function that the front-end can use to get a CSRF token if
     # it needs to. Might not be needed.
-    return JsonResponse({'csrfToken': get_token(request)}, status=200)
+    t = get_token(request)
+    return JsonResponse({'csrfToken': t}, status=200)
 
 @require_POST
 def login_view(request):
@@ -149,7 +151,7 @@ def query(request):
 
 @require_POST
 @requires_authentication
-@ratelimit(key='user', rate='1/10s')
+@ratelimit(key='user', rate='1/1s')
 def search(request):
 
     data = json.loads(request.body)
@@ -170,3 +172,45 @@ def search(request):
     r = response.json()
     # forward the response.
     return JsonResponse(data=r, status=200)
+
+@require_POST
+@requires_authentication
+def query_feedback(request):
+
+    data = json.loads(request.body)
+    query_id = data.get('id')
+    feedback_text = data.get('feedback_text')
+
+    # all fields must be provided!
+    if query_id is None or feedback_text is None:
+        return JsonResponse(data={'detail':'Missing query_id or feedback_text'}, status=400)
+
+    q = Query.objects.get(id=query_id)
+    f = QueryFeedback.objects.create(user=request.user, query=q, text=feedback_text)
+    f.save()
+
+    return JsonResponse({'detail':'Feedback submitted'}, status=200)
+
+@require_POST
+@requires_authentication
+def serp_feedback(request):
+
+    data = json.loads(request.body)
+    query_id = data.get('id')
+    topic_idx = data.get('topic')
+    serp_idx = data.get('serp')
+    thumb = data.get('thumb') # 0, 1 for thumbdown, thumbup
+
+    # all fields must be provided!
+    if None in [query_id, thumb, topic_idx, serp_idx]:
+        return JsonResponse(data={'detail':'Missing one or more fields'}, status=400)
+
+    q = Query.objects.get(id=query_id)
+    skeleton = json.loads(q.skeleton)
+    serp = SERP.objects.filter(queries__in=[q.id]).filter(search_string__contains=skeleton[topic_idx])[0]
+    thumbs = ['TD', 'TU']
+    resource = json.loads(serp.entries)[serp_idx]
+    f = SERPFeedback.objects.create(user=request.user, query=q, serp=serp, rating=thumbs[thumb], resource=json.dumps(resource))
+    f.save()
+
+    return JsonResponse({'detail':'Feedback submitted'}, status=200)

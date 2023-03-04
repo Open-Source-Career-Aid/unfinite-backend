@@ -5,6 +5,7 @@ from .models import *
 from import_export import resources
 from import_export.admin import ImportExportMixin
 import secrets
+from django.forms import ModelForm
 
 @admin.register(UnfiniteUser)
 class UserAdmin(DjangoUserAdmin):
@@ -39,25 +40,31 @@ class UserAdmin(DjangoUserAdmin):
 
 class BetaKeyEmailResource(resources.ModelResource):
 
-    def before_save_instance(self, instance, using_transactions, dry_run):
-        instance.key = secrets.token_urlsafe(32)
+    #def before_save_instance(self, instance, using_transactions, dry_run):
+    #    instance.key = secrets.token_urlsafe(32)
 
     class Meta:
         model = BetaKey
         import_id_fields = ('user_email',)
-        fields = ('user_email',)
+        fields = ('user_email')
 
 class BetaKeyResource(resources.ModelResource):
 
     class Meta:
         model = BetaKey
         export_id_fields = ('user_email',)
-        fields = ('user_email','key',)
+        fields = ('user_email', 'key')
+
+class BetaKeyForm(ModelForm):
+    class Meta:
+        model = BetaKey
+        exclude = ['key']
 
 class CustomBetaKeyAdmin(ImportExportMixin, admin.ModelAdmin):
     resource_classes = [BetaKeyEmailResource, BetaKeyResource]
 
-    list_display = ('user_email',)
+    list_display = ('user_email','key',)
+    form = BetaKeyForm
 
 admin.site.register(BetaKey, CustomBetaKeyAdmin)
 
@@ -68,3 +75,11 @@ class QueryAdmin(admin.ModelAdmin):
 @admin.register(SERP)
 class SERPAdmin(admin.ModelAdmin):
     list_display = ('search_string',)
+
+@admin.register(QueryFeedback)
+class QueryFeedbackAdmin(admin.ModelAdmin):
+    list_display = ('user','query','text',)
+
+@admin.register(SERPFeedback)
+class SERPFeedbackAdmin(admin.ModelAdmin):
+    list_display = ('user','query','serp','rating','resource',)
