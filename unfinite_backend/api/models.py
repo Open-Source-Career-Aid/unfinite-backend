@@ -56,6 +56,9 @@ class UnfiniteUser(AbstractUser):
 # class Learner(models.Model):
 #     user = models.OneToOneField(UnfiniteUser, on_delete=models.CASCADE, primary_key=True)
 
+def get_key():
+    return secrets.token_urlsafe(32)
+
 class BetaKey(models.Model):
 
     # this object links a to-be-registered user with a one-time-use key
@@ -63,7 +66,7 @@ class BetaKey(models.Model):
     # a user (email) and a key is deleted after the user registers.
 
     user_email = models.EmailField(_('email address'), unique=True)
-    key = models.CharField(max_length=64, default=lambda: secrets.token_urlsafe(32))
+    key = models.CharField(max_length=64, default=get_key)
 
     def validate_key(self, candidate_key):
         return self.key == candidate_key
@@ -168,3 +171,20 @@ class SERPItem(models.Model):
             self.created = timezone.now()
         self.updated = timezone.now()
         return super(SERPItem, self).save(*args, **kwargs) 
+
+class Completion(models.Model):
+
+    user = models.ForeignKey(UnfiniteUser, on_delete=models.PROTECT)
+    query = models.ForeignKey(Query, on_delete=models.PROTECT)
+
+    completion = models.TextField()
+
+    created = models.DateField()
+    updated = models.DateField()
+
+    def save(self, *args, **kwargs):
+        ''' On save, update timestamps '''
+        if not self.id:
+            self.created = timezone.now()
+        self.updated = timezone.now()
+        return super(Completion, self).save(*args, **kwargs) 

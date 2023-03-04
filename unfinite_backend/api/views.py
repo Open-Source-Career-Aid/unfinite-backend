@@ -6,7 +6,7 @@ from django.views.decorators.http import require_POST
 from .models import UnfiniteUser, BetaKey
 from django.conf import settings
 from django_ratelimit.decorators import ratelimit
-from .models import Query, SERP, QueryFeedback, SERPFeedback
+from .models import Query, SERP, QueryFeedback, SERPFeedback, Completion
 
 def requires_authentication(func):
     # an nice little wrapper to require users to be logged in
@@ -186,6 +186,10 @@ def query_feedback(request):
         return JsonResponse(data={'detail':'Missing query_id or feedback_text'}, status=400)
 
     q = Query.objects.get(id=query_id)
+
+    if q is None:
+        return JsonResponse(data={'detail':'no such query'}, status=400)
+
     f = QueryFeedback.objects.create(user=request.user, query=q, text=feedback_text)
     f.save()
 
@@ -206,11 +210,82 @@ def serp_feedback(request):
         return JsonResponse(data={'detail':'Missing one or more fields'}, status=400)
 
     q = Query.objects.get(id=query_id)
+
+    if q is None:
+        return JsonResponse(data={'detail':'no such query'}, status=400)
+
+    if topic_idx < 0 or topic_idx >= len(json.loads(q.skeleton)):
+        return JsonResponse(data={'detail':'no such topic'}, status=400)
+
     skeleton = json.loads(q.skeleton)
     serp = SERP.objects.filter(queries__in=[q.id]).filter(search_string__contains=skeleton[topic_idx])[0]
     thumbs = ['TD', 'TU']
+
+    if serp_idx < 0 or serp_idx >= len(json.loads(serp.entries)):
+        return JsonResponse(data={'detail':'no such serp'}, status=400)
+
     resource = json.loads(serp.entries)[serp_idx]
     f = SERPFeedback.objects.create(user=request.user, query=q, serp=serp, rating=thumbs[thumb], resource=json.dumps(resource))
     f.save()
 
     return JsonResponse({'detail':'Feedback submitted'}, status=200)
+
+
+@requires_authentication
+def get_completion(request):
+
+    #data = json.loads(request.body)
+    query_id = request.GET.get('id', '')
+    
+    cs = Completion.objects.filter(query__in=[query_id], user__in=[request.user.id])
+
+    if len(cs) == 0:
+        c = create_blank_completion(query_id, request.user.id)
+    else:
+        c = cs[0]
+    
+    return JsonResponse(data={'completion':json.dumps(c.completion)}, status=200)
+
+@require_POST
+@requires_authentication
+def modify_completion(request):
+
+    data = json.loads(request.body)
+    query_id = data.get('id')
+    topic_id = data.get('topic')
+
+    if None in [query_id, topic_id]:
+        return JsonResponse(data={'detail':'query id/topic missing'}, status=400)
+
+    if Query.objects.filter(id=query_id).count() == 0:
+        return JsonResponse(data={'detail':'no such query'}, status=400)
+
+    c = Completion.objects.get(query__in=[query_id], user__in=[request.user.id])
+
+    if c is None:
+        c = create_blank_completion(query_id, request.user.id)
+
+    q = Query.objects.get(id=query_id)
+
+    if topic_id < 0 or topic_id >= len(json.loads(q.skeleton)):
+        return sonResponse(data={'detail':'no such topic'}, status=400)
+
+    completion = json.loads(c.completion)
+
+    completion[topic_id] = 1 - completion[topic_id] # flip it!
+
+    c.completion = json.dumps(completion)
+
+    c.save()
+
+    return JsonResponse(data={'detail':'success'}, status=200)
+    
+
+def create_blank_completion(query_id, user_id):
+
+    q = Query.objects.get(id=query_id)
+    completion = [0 for i in range(len(json.loads(q.skeleton)))]
+    c = Completion.objects.create(query_id=query_id, user_id=user_id, completion=completion)
+    c.save()
+
+    return c

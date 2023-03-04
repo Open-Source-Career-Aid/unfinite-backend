@@ -83,3 +83,7 @@ class QueryFeedbackAdmin(admin.ModelAdmin):
 @admin.register(SERPFeedback)
 class SERPFeedbackAdmin(admin.ModelAdmin):
     list_display = ('user','query','serp','rating','resource',)
+
+@admin.register(Completion)
+class CompletionAdmin(admin.ModelAdmin):
+    list_display = ('user','query','completion')

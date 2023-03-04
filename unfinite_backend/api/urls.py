@@ -12,4 +12,6 @@ urlpatterns = [
     path('is_authenticated/', views.is_authenticated, name='api-is-authenticated'),
     path('feedback/query/', views.query_feedback, name='api-query-feedback'),
     path('feedback/serp/', views.serp_feedback, name='api-serp-feedback'),
+    path('completion/', views.get_completion, name='api-get-completion'),
+    path('completion/modify/', views.modify_completion, name='api-modify-completion'),
 ]
