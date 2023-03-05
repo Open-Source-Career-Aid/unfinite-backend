@@ -6,6 +6,7 @@ from django.views.decorators.http import require_POST
 from .models import UnfiniteUser, BetaKey
 from django.conf import settings
 from django_ratelimit.decorators import ratelimit
+from .models import Query, SERP, Feedback, SERPFeedback, Completion
 
 def requires_authentication(func):
     # an nice little wrapper to require users to be logged in
@@ -20,7 +21,6 @@ def requires_authentication(func):
 
 def is_authenticated(request):
     if request.user.is_authenticated:
-        print("is_authenticated: true")
         return JsonResponse({'is_authenticated': True}, status=200)
 
     return JsonResponse({'is_authenticated': False}, status=200)
@@ -30,7 +30,6 @@ def get_csrf_cookie(request):
     # a nice little function that the front-end can use to get a CSRF token if
     # it needs to. Might not be needed.
     t = get_token(request)
-    print(t)
     return JsonResponse({'csrfToken': t}, status=200)
 
 @require_POST
@@ -140,7 +139,7 @@ def query(request):
     
     # eventually, make a django config variable corresponding to the queryhandler url
     # make a request to the queryhandler. Send Authorization key. It needs the query text and the id of the user making it.
-    response = requests.post('https://app.unfinite.co/queryhandler/query/', headers={'Authorization':settings.QUERYHANDLER_KEY}, json={'query_text': query_text, 'user_id': request.user.id})
+    response = requests.post('http://127.0.0.1:8000/queryhandler/query/', headers={'Authorization':settings.QUERYHANDLER_KEY}, json={'query_text': query_text, 'user_id': request.user.id})
 
     # if there's an error, oops.
     if response.status_code != 200:
@@ -164,7 +163,7 @@ def search(request):
         return JsonResponse(data={'detail':'Missing query_id or topic'}, status=400)
 
     # ask queryhandler to make the search. Provide Authorization key. Can just forward the request body JSON here.
-    response = requests.post('https://app.unfinite.co/queryhandler/search/', headers={'Authorization':settings.QUERYHANDLER_KEY}, json=data)
+    response = requests.post('http://127.0.0.1:8000/queryhandler/search/', headers={'Authorization':settings.QUERYHANDLER_KEY}, json=data)
 
     # oops
     if response.status_code != 200:
@@ -173,3 +172,123 @@ def search(request):
     r = response.json()
     # forward the response.
     return JsonResponse(data=r, status=200)
+
+@require_POST
+@requires_authentication
+def query_feedback(request):
+
+    data = json.loads(request.body)
+    query_id = data.get('id')
+    feedback_text = data.get('feedback_text')
+
+    # all fields must be provided!
+    if feedback_text is None:
+        return JsonResponse(data={'detail':'Missing query_id or feedback_text'}, status=400)
+
+    if query_id is not None:
+        q = Query.objects.get(id=query_id)
+
+        if q is None:
+            return JsonResponse(data={'detail':'no such query'}, status=400)
+
+        f = Feedback.objects.create(user=request.user, query=q, text=feedback_text)
+    else:
+        f = Feedback.objects.create(user=request.user, text=feedback_text)
+    f.save()
+
+    return JsonResponse({'detail':'Feedback submitted'}, status=200)
+
+@require_POST
+@requires_authentication
+def serp_feedback(request):
+
+    data = json.loads(request.body)
+    query_id = data.get('id')
+    topic_idx = data.get('topic')
+    serp_idx = data.get('serp')
+    thumb = data.get('thumb') # 0, 1 for thumbdown, thumbup
+
+    # all fields must be provided!
+    if None in [query_id, thumb, topic_idx, serp_idx]:
+        return JsonResponse(data={'detail':'Missing one or more fields'}, status=400)
+
+    q = Query.objects.get(id=query_id)
+
+    if q is None:
+        return JsonResponse(data={'detail':'no such query'}, status=400)
+
+    if topic_idx < 0 or topic_idx >= len(json.loads(q.skeleton)):
+        return JsonResponse(data={'detail':'no such topic'}, status=400)
+
+    skeleton = json.loads(q.skeleton)
+    serp = SERP.objects.filter(queries__in=[q.id]).filter(search_string__contains=skeleton[topic_idx])[0]
+    thumbs = ['TD', 'TU']
+
+    if serp_idx < 0 or serp_idx >= len(json.loads(serp.entries)):
+        return JsonResponse(data={'detail':'no such serp'}, status=400)
+
+    resource = json.loads(serp.entries)[serp_idx]
+    f = SERPFeedback.objects.create(user=request.user, query=q, serp=serp, rating=thumbs[thumb], resource=json.dumps(resource))
+    f.save()
+
+    return JsonResponse({'detail':'Feedback submitted'}, status=200)
+
+
+@requires_authentication
+def get_completion(request):
+
+    #data = json.loads(request.body)
+    query_id = request.GET.get('id', '')
+    
+    cs = Completion.objects.filter(query__in=[query_id], user__in=[request.user.id])
+
+    if len(cs) == 0:
+        c = create_blank_completion(query_id, request.user.id)
+    else:
+        c = cs[0]
+    
+    return JsonResponse(data={'completion':json.dumps(c.completion)}, status=200)
+
+@require_POST
+@requires_authentication
+def modify_completion(request):
+
+    data = json.loads(request.body)
+    query_id = data.get('id')
+    topic_id = data.get('topic')
+
+    if None in [query_id, topic_id]:
+        return JsonResponse(data={'detail':'query id/topic missing'}, status=400)
+
+    if Query.objects.filter(id=query_id).count() == 0:
+        return JsonResponse(data={'detail':'no such query'}, status=400)
+
+    c = Completion.objects.get(query__in=[query_id], user__in=[request.user.id])
+
+    if c is None:
+        c = create_blank_completion(query_id, request.user.id)
+
+    q = Query.objects.get(id=query_id)
+
+    if topic_id < 0 or topic_id >= len(json.loads(q.skeleton)):
+        return JsonResponse(data={'detail':'no such topic'}, status=400)
+
+    completion = json.loads(c.completion)
+
+    completion[topic_id] = 1 - completion[topic_id] # flip it!
+
+    c.completion = json.dumps(completion)
+
+    c.save()
+
+    return JsonResponse(data={'detail':'success'}, status=200)
+    
+
+def create_blank_completion(query_id, user_id):
+
+    q = Query.objects.get(id=query_id)
+    completion = [0 for i in range(len(json.loads(q.skeleton)))]
+    c = Completion.objects.create(query_id=query_id, user_id=user_id, completion=completion)
+    c.save()
+
+    return c

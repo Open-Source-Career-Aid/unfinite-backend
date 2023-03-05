@@ -57,6 +57,9 @@ class UnfiniteUser(AbstractUser):
 # class Learner(models.Model):
 #     user = models.OneToOneField(UnfiniteUser, on_delete=models.CASCADE, primary_key=True)
 
+def get_key():
+    return secrets.token_urlsafe(32)
+
 class BetaKey(models.Model):
 
     # this object links a to-be-registered user with a one-time-use key
@@ -64,7 +67,7 @@ class BetaKey(models.Model):
     # a user (email) and a key is deleted after the user registers.
 
     user_email = models.EmailField(_('email address'), unique=True)
-    key = models.CharField(max_length=64, default=lambda: secrets.token_urlsafe(32))
+    key = models.CharField(max_length=64, default=get_key)
 
     def validate_key(self, candidate_key):
         return self.key == candidate_key
@@ -76,7 +79,7 @@ class Query(models.Model):
     # the number of tokens used (for cost tracking purposes), and the number
     # of times the query was searched.
 
-    user = models.ForeignKey(UnfiniteUser, on_delete=models.PROTECT)
+    user = models.ForeignKey(UnfiniteUser, on_delete=models.SET_NULL, null=True)
     query_text = models.TextField()
     skeleton = models.TextField()
     num_tokens = models.IntegerField()
@@ -95,31 +98,6 @@ class Query(models.Model):
             self.created = timezone.now()
         self.updated = timezone.now()
         return super(Query, self).save(*args, **kwargs)
-
-class Feedback(models.Model):
-
-    # This hasn't been used yet. TODO: Refine/implement
-
-    user = models.OneToOneField(UnfiniteUser, on_delete=models.PROTECT, primary_key=False)
-    query = models.ForeignKey(Query, on_delete=models.PROTECT)
-    text = models.TextField()
-
-    THUMBUP = 'TU'
-    THUMBDOWN = 'TD'
-    THUMBNEUTRAL = 'TN'
-    THUMB_CHOICES = [(THUMBUP, 'Thumbs-up'), (THUMBDOWN, 'Thumbds-down'), (THUMBNEUTRAL, 'Neutral')]
-
-    rating = models.CharField(max_length=2, choices=THUMB_CHOICES, default=THUMBNEUTRAL)
-
-    created = models.DateField()
-    updated = models.DateField()
-
-    def save(self, *args, **kwargs):
-        ''' On save, update timestamps '''
-        if not self.id:
-            self.created = timezone.now()
-        self.updated = timezone.now()
-        return super(Feedback, self).save(*args, **kwargs)
 
 class SERP(models.Model):
 
@@ -140,6 +118,44 @@ class SERP(models.Model):
         self.updated = timezone.now()
         return super(SERP, self).save(*args, **kwargs)
 
+class SERPFeedback(models.Model):
+    user = models.ForeignKey(UnfiniteUser, on_delete=models.SET_NULL, primary_key=False, null=True)
+    query = models.ForeignKey(Query, on_delete=models.SET_NULL, null=True)
+    serp = models.ForeignKey(SERP, on_delete=models.SET_NULL, null=True)
+    resource = models.TextField()
+
+    THUMBUP = 'TU'
+    THUMBDOWN = 'TD'
+    THUMBNEUTRAL = 'TN'
+    THUMB_CHOICES = [(THUMBUP, 'Thumbs-up'), (THUMBDOWN, 'Thumbs-down'), (THUMBNEUTRAL, 'Neutral')]
+
+    rating = models.CharField(max_length=2, choices=THUMB_CHOICES, default=THUMBNEUTRAL)
+
+    created = models.DateField()
+    updated = models.DateField()
+
+    def save(self, *args, **kwargs):
+        ''' On save, update timestamps '''
+        if not self.id:
+            self.created = timezone.now()
+        self.updated = timezone.now()
+        return super(SERPFeedback, self).save(*args, **kwargs)
+
+class Feedback(models.Model):
+    user = models.ForeignKey(UnfiniteUser, on_delete=models.SET_NULL, primary_key=False, null=True)
+    query = models.ForeignKey(Query, on_delete=models.SET_NULL, null=True)
+    text = models.TextField()
+
+    created = models.DateField()
+    updated = models.DateField()
+
+    def save(self, *args, **kwargs):
+        ''' On save, update timestamps '''
+        if not self.id:
+            self.created = timezone.now()
+        self.updated = timezone.now()
+        return super(Feedback, self).save(*args, **kwargs)
+
 class SERPItem(models.Model):
 
     # No longer used, TODO: Delete
@@ -156,3 +172,20 @@ class SERPItem(models.Model):
             self.created = timezone.now()
         self.updated = timezone.now()
         return super(SERPItem, self).save(*args, **kwargs) 
+
+class Completion(models.Model):
+
+    user = models.ForeignKey(UnfiniteUser, on_delete=models.SET_NULL, null=True)
+    query = models.ForeignKey(Query, on_delete=models.SET_NULL, null=True)
+
+    completion = models.TextField()
+
+    created = models.DateField()
+    updated = models.DateField()
+
+    def save(self, *args, **kwargs):
+        ''' On save, update timestamps '''
+        if not self.id:
+            self.created = timezone.now()
+        self.updated = timezone.now()
+        return super(Completion, self).save(*args, **kwargs) 

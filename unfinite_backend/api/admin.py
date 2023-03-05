@@ -66,8 +66,6 @@ class CustomBetaKeyAdmin(ImportExportMixin, admin.ModelAdmin):
     list_display = ('user_email','key',)
     form = BetaKeyForm
 
-
-
 admin.site.register(BetaKey, CustomBetaKeyAdmin)
 
 @admin.register(Query)
@@ -77,3 +75,15 @@ class QueryAdmin(admin.ModelAdmin):
 @admin.register(SERP)
 class SERPAdmin(admin.ModelAdmin):
     list_display = ('search_string',)
+
+@admin.register(Feedback)
+class FeedbackAdmin(admin.ModelAdmin):
+    list_display = ('user','query','text',)
+
+@admin.register(SERPFeedback)
+class SERPFeedbackAdmin(admin.ModelAdmin):
+    list_display = ('user','query','serp','rating','resource',)
+
+@admin.register(Completion)
+class CompletionAdmin(admin.ModelAdmin):
+    list_display = ('user','query','completion')

@@ -1,5 +1,6 @@
 import bs4, requests, json
 from django.apps import apps
+from django.conf import settings
 
 
 #Feedback = apps.get_model('api', 'Feedback')
@@ -71,5 +72,34 @@ def attach_links(skeleton, query):
 
     return out
 
+# using serphouse
+
+def serphouse(search_string):
+
+    token = settings.SERPHOUSE_KEY
+
+    params = {
+        'q': search_string,
+        'domain': 'google.com',
+        'lang': 'en',
+        'device': 'desktop',
+        'serp_type': 'web',
+        'loc': 'New York,New York,United States',
+        'num_result': '100',
+    }   
+
+    url = 'https://api.serphouse.com/serp/live'
+    headers = {
+        'Authorization': f'Bearer {token}'
+    }
+
+    response = requests.request('GET', url, headers=headers, params=params).json()
+    #print(response['results'])
+
+    organic = response['results']['results']['organic'][:10] # here, a limit of 10 is imposed. Consider changing.
+
+    pairs = list(map(lambda x: (x['link'], x['title']), organic))
+
+    return pairs
 
 
