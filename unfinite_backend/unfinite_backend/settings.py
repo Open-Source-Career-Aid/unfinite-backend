@@ -30,6 +30,7 @@ SECRET_KEY = os.getenv('SECRET_KEY') #'django-insecure-($lmox_2f&n4d85n9becwy26(
 
 # key for authentication between api and queryhandler
 QUERYHANDLER_KEY = str(os.getenv('QUERYHANDLER_KEY'))
+QUERYHANDLER_URL = str(os.getenv('QUERYHANDLER_URL'))
 
 # get openai api key
 OPENAI_API_KEY = str(os.getenv('OPENAI_API_KEY'))
