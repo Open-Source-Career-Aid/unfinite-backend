@@ -94,7 +94,7 @@ def serphouse(search_string):
     }
 
     response = requests.request('GET', url, headers=headers, params=params).json()
-    print(response['results'])
+    #print(response['results'])
 
     organic = response['results']['results']['organic'][:10] # here, a limit of 10 is imposed. Consider changing.
 
