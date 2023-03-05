@@ -139,7 +139,7 @@ def query(request):
     
     # eventually, make a django config variable corresponding to the queryhandler url
     # make a request to the queryhandler. Send Authorization key. It needs the query text and the id of the user making it.
-    response = requests.post(f'{settings.QUERYHANDLER_URL}/query/', headers={'Authorization':settings.QUERYHANDLER_KEY}, json={'query_text': query_text, 'user_id': request.user.id})
+    response = requests.post(f'{settings.QUERYHANDLER_URL}query/', headers={'Authorization':settings.QUERYHANDLER_KEY}, json={'query_text': query_text, 'user_id': request.user.id})
 
     # if there's an error, oops.
     if response.status_code != 200:
@@ -163,7 +163,7 @@ def search(request):
         return JsonResponse(data={'detail':'Missing query_id or topic'}, status=400)
 
     # ask queryhandler to make the search. Provide Authorization key. Can just forward the request body JSON here.
-    response = requests.post(f'{settings.QUERYHANDLER_URL}/search/', headers={'Authorization':settings.QUERYHANDLER_KEY}, json=data)
+    response = requests.post(f'{settings.QUERYHANDLER_URL}search/', headers={'Authorization':settings.QUERYHANDLER_KEY}, json=data)
 
     # oops
     if response.status_code != 200:
