@@ -1,6 +1,7 @@
 import bs4, requests, json
 from django.apps import apps
 from django.conf import settings
+import html
 
 
 #Feedback = apps.get_model('api', 'Feedback')
@@ -98,7 +99,7 @@ def serphouse(search_string):
 
     organic = response['results']['results']['organic'][:10] # here, a limit of 10 is imposed. Consider changing.
 
-    pairs = list(map(lambda x: (x['link'], x['title']), organic))
+    pairs = list(map(lambda x: (x['link'], html.unescape(x['title'])), organic))
 
     return pairs
 
