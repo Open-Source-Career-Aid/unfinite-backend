@@ -2,6 +2,7 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
+import secrets
 
 # Create your models here.
 
@@ -78,7 +79,7 @@ class Query(models.Model):
     # the number of tokens used (for cost tracking purposes), and the number
     # of times the query was searched.
 
-    user = models.ForeignKey(UnfiniteUser, on_delete=models.PROTECT)
+    user = models.ForeignKey(UnfiniteUser, on_delete=models.SET_NULL, null=True)
     query_text = models.TextField()
     skeleton = models.TextField()
     num_tokens = models.IntegerField()
@@ -118,9 +119,9 @@ class SERP(models.Model):
         return super(SERP, self).save(*args, **kwargs)
 
 class SERPFeedback(models.Model):
-    user = models.ForeignKey(UnfiniteUser, on_delete=models.PROTECT, primary_key=False)
-    query = models.ForeignKey(Query, on_delete=models.PROTECT)
-    serp = models.ForeignKey(SERP, on_delete=models.PROTECT)
+    user = models.ForeignKey(UnfiniteUser, on_delete=models.SET_NULL, primary_key=False, null=True)
+    query = models.ForeignKey(Query, on_delete=models.SET_NULL, null=True)
+    serp = models.ForeignKey(SERP, on_delete=models.SET_NULL, null=True)
     resource = models.TextField()
 
     THUMBUP = 'TU'
@@ -140,9 +141,9 @@ class SERPFeedback(models.Model):
         self.updated = timezone.now()
         return super(SERPFeedback, self).save(*args, **kwargs)
 
-class QueryFeedback(models.Model):
-    user = models.ForeignKey(UnfiniteUser, on_delete=models.PROTECT, primary_key=False)
-    query = models.ForeignKey(Query, on_delete=models.PROTECT)
+class Feedback(models.Model):
+    user = models.ForeignKey(UnfiniteUser, on_delete=models.SET_NULL, primary_key=False, null=True)
+    query = models.ForeignKey(Query, on_delete=models.SET_NULL, null=True)
     text = models.TextField()
 
     created = models.DateField()
@@ -153,7 +154,7 @@ class QueryFeedback(models.Model):
         if not self.id:
             self.created = timezone.now()
         self.updated = timezone.now()
-        return super(QueryFeedback, self).save(*args, **kwargs)
+        return super(Feedback, self).save(*args, **kwargs)
 
 class SERPItem(models.Model):
 
@@ -174,8 +175,8 @@ class SERPItem(models.Model):
 
 class Completion(models.Model):
 
-    user = models.ForeignKey(UnfiniteUser, on_delete=models.PROTECT)
-    query = models.ForeignKey(Query, on_delete=models.PROTECT)
+    user = models.ForeignKey(UnfiniteUser, on_delete=models.SET_NULL, null=True)
+    query = models.ForeignKey(Query, on_delete=models.SET_NULL, null=True)
 
     completion = models.TextField()
 

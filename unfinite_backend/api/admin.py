@@ -76,8 +76,8 @@ class QueryAdmin(admin.ModelAdmin):
 class SERPAdmin(admin.ModelAdmin):
     list_display = ('search_string',)
 
-@admin.register(QueryFeedback)
-class QueryFeedbackAdmin(admin.ModelAdmin):
+@admin.register(Feedback)
+class FeedbackAdmin(admin.ModelAdmin):
     list_display = ('user','query','text',)
 
 @admin.register(SERPFeedback)

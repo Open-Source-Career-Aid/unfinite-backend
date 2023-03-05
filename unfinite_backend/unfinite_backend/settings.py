@@ -25,7 +25,8 @@ STATIC_ROOT= BASE_DIR / 'static/'
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-($lmox_2f&n4d85n9becwy26(@4=b7rc&*#+!5-aff7vi$u(+e'
+SECRET_KEY = str(os.getenv('SECRET_KEY'))
+SERPHOUSE_KEY = str(os.getenv('SERPHOUSE_KEY'))
 
 # key for authentication between api and queryhandler
 QUERYHANDLER_KEY = str(os.getenv('QUERYHANDLER_KEY'))

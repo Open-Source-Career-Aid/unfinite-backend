@@ -6,7 +6,7 @@ from django.views.decorators.http import require_POST
 from .models import UnfiniteUser, BetaKey
 from django.conf import settings
 from django_ratelimit.decorators import ratelimit
-from .models import Query, SERP, QueryFeedback, SERPFeedback, Completion
+from .models import Query, SERP, Feedback, SERPFeedback, Completion
 
 def requires_authentication(func):
     # an nice little wrapper to require users to be logged in
@@ -182,15 +182,18 @@ def query_feedback(request):
     feedback_text = data.get('feedback_text')
 
     # all fields must be provided!
-    if query_id is None or feedback_text is None:
+    if feedback_text is None:
         return JsonResponse(data={'detail':'Missing query_id or feedback_text'}, status=400)
 
-    q = Query.objects.get(id=query_id)
+    if query_id is not None:
+        q = Query.objects.get(id=query_id)
 
-    if q is None:
-        return JsonResponse(data={'detail':'no such query'}, status=400)
+        if q is None:
+            return JsonResponse(data={'detail':'no such query'}, status=400)
 
-    f = QueryFeedback.objects.create(user=request.user, query=q, text=feedback_text)
+        f = Feedback.objects.create(user=request.user, query=q, text=feedback_text)
+    else:
+        f = Feedback.objects.create(user=request.user, text=feedback_text)
     f.save()
 
     return JsonResponse({'detail':'Feedback submitted'}, status=200)
@@ -268,7 +271,7 @@ def modify_completion(request):
     q = Query.objects.get(id=query_id)
 
     if topic_id < 0 or topic_id >= len(json.loads(q.skeleton)):
-        return sonResponse(data={'detail':'no such topic'}, status=400)
+        return JsonResponse(data={'detail':'no such topic'}, status=400)
 
     completion = json.loads(c.completion)
 

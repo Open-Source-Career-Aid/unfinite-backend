@@ -4,7 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from .openai_api import query_generation_model
 import json
-from .scrape import attach_links, google_SERP
+from .scrape import attach_links, google_SERP, serphouse
 # Create your views here.
 
 # eventually, when the apps are on different machines,
@@ -73,14 +73,14 @@ def search(request):
         return JsonResponse(data={'detail':f'Invalid topic {topic_num}'}, status=500)
 
     # craft search string to use on Google
-    search_string = f'{q.query_text} "{skeleton[topic_num]}"'
+    search_string = f'{skeleton[topic_num]} in {q.query_text}'
 
     # check if there's an existing SERP object already associated with that search string
     s = SERP.objects.filter(search_string=search_string)
 
     if len(s) == 0:
         # no existing SERP - just gotta scrape it!
-        serp = google_SERP(search_string) # scrape
+        serp = serphouse(search_string) # scrape
         new_serp = SERP(search_string=search_string, entries=json.dumps(serp)) # new SERP
         new_serp.save()
         new_serp.queries.add(q) # relate to the query
