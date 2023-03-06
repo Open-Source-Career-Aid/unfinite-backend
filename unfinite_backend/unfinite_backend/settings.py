@@ -100,6 +100,9 @@ TEMPLATES = [
         'DIRS': t,
         'APP_DIRS': True,
         'OPTIONS': {
+            #'sql_mode': 'traditional',
+            #'isolation_level': 'read committed',
+            #'charset': 'utf8mb4',
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
