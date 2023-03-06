@@ -30,6 +30,7 @@ SERPHOUSE_KEY = str(os.getenv('SERPHOUSE_KEY'))
 
 # key for authentication between api and queryhandler
 QUERYHANDLER_KEY = str(os.getenv('QUERYHANDLER_KEY'))
+QUERYHANDLER_URL = str(os.getenv('QUERYHANDLER_URL'))
 
 # get openai api key
 OPENAI_API_KEY = str(os.getenv('OPENAI_API_KEY'))
