@@ -189,3 +189,17 @@ class Completion(models.Model):
             self.created = timezone.now()
         self.updated = timezone.now()
         return super(Completion, self).save(*args, **kwargs) 
+
+class EventLog(models.Model):
+
+    user = models.ForeignKey(UnfiniteUser, on_delete=models.SET_NULL, null=True)
+    query = models.ForeignKey(Query, on_delete=models.SET_NULL, null=True)
+    serp = models.ForeignKey(SERP, on_delete=models.SET_NULL, null=True)
+    completion = models.ForeignKey(Completion, on_delete=models.SET_NULL, null=True)
+
+    query_was_new = models.BooleanField(null=True)
+    serp_was_new = models.BooleanField(null=True)
+    completion_idx = models.IntegerField(blank=True, null=True)
+    desc = models.TextField()
+
+    created = models.DateTimeField(auto_now_add=True)

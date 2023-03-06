@@ -41,12 +41,12 @@ def query(request):
     '''
     d = json.loads(request.body) # this assumes that the API sent a well-formed request. TODO: maybe check here...
 
-    skeleton, q = query_generation_model('text-davinci-003', d.get('query_text'), d.get('user_id'))
+    skeleton, q, was_new = query_generation_model('text-davinci-003', d.get('query_text'), d.get('user_id'))
 
     if skeleton is None: # :(
         return JsonResponse({'detail':'failure'}, status=500)
 
-    return JsonResponse({'skeleton':skeleton, 'id':q.id}, status=200)
+    return JsonResponse({'skeleton':skeleton, 'id':q.id, 'was_new': was_new}, status=200)
 
 @csrf_exempt
 @require_internal
@@ -78,6 +78,8 @@ def search(request):
     # check if there's an existing SERP object already associated with that search string
     s = SERP.objects.filter(search_string=search_string)
 
+    was_new = True
+
     if len(s) == 0:
         # no existing SERP - just gotta scrape it!
         serp = serphouse(search_string) # scrape
@@ -85,10 +87,13 @@ def search(request):
         new_serp.save()
         new_serp.queries.add(q) # relate to the query
         new_serp.save()
+        s = new_serp
     else:
         # pull existing SERP
+        was_new = False
         serp = json.loads(s[0].entries)
         s[0].queries.add(q) # still relate to query (might already be, but there won't be duplicates)
         s[0].save()
+        s = s[0]
 
-    return JsonResponse(data={'serp': serp}, status=200)
+    return JsonResponse(data={'serp': serp, 'id':s.id, 'was_new': was_new}, status=200)

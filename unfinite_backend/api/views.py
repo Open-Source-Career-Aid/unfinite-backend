@@ -7,6 +7,7 @@ from .models import UnfiniteUser, BetaKey
 from django.conf import settings
 from django_ratelimit.decorators import ratelimit
 from .models import Query, SERP, Feedback, SERPFeedback, Completion
+from .signals import log_signal
 
 def requires_authentication(func):
     # an nice little wrapper to require users to be logged in
@@ -55,13 +56,16 @@ def login_view(request):
 
     # success! log them in.
     login(request, user)
+    log_signal.send(sender=None, user_id=user.id, desc="Logged in")
     return JsonResponse({'detail': 'Successfully logged in.'})
 
 @require_POST
 @requires_authentication
 def logout_view(request):
     # logout a user. Doesn't require anything other than the CSRF token.
+    user = request.user
     logout(request)
+    log_signal.send(sender=None, user_id=user.id, desc="Logged out")
     return JsonResponse({'detail': 'Successfully logged out.'})
 
 @require_POST
@@ -100,7 +104,7 @@ def register_view(request):
     user = UnfiniteUser.objects.create_user(email=email, password=password, first_name=first_name, last_name=last_name)
     user.is_beta = True
     user.save()
-
+    log_signal.send(sender=None, user_id=user.id, desc="Registered")
     # to delete the key after use, or not: that is the question...
     # do this after user account is created! Otherwise, if the registration failed,
     # they'd no longer have a key and wouldn't be able to try again!
@@ -108,6 +112,7 @@ def register_view(request):
 
     # log them in. for convenience. 
     login(request, user)
+    log_signal.send(sender=None, user_id=user.id, desc="Logged in")
     return JsonResponse({'detail': 'Successfully registered.'})
 
 # TODO: probably can delete this. 
@@ -139,15 +144,17 @@ def query(request):
     
     # eventually, make a django config variable corresponding to the queryhandler url
     # make a request to the queryhandler. Send Authorization key. It needs the query text and the id of the user making it.
-    response = requests.post(f'{settings.QUERYHANDLER_URL}query/', headers={'Authorization':settings.QUERYHANDLER_KEY}, json={'query_text': query_text, 'user_id': request.user.id})
+    response = requests.post('http://127.0.0.1:8000/queryhandler/query/', headers={'Authorization':settings.QUERYHANDLER_KEY}, json={'query_text': query_text, 'user_id': request.user.id})
 
     # if there's an error, oops.
     if response.status_code != 200:
         return JsonResponse(data={'detail':'Query failed'}, status=500)
 
     r = response.json()
+    r2 = {k: v for k, v in r.items() if k != 'was_new'}
     # forward the response from the queryhandler.
-    return JsonResponse(data=r, status=200)
+    log_signal.send(sender=None, user_id=request.user.id, query_id=r['id'], query_was_new=r['was_new'], desc="Queried")
+    return JsonResponse(data=r2, status=200)
 
 @require_POST
 @requires_authentication
@@ -162,16 +169,21 @@ def search(request):
     if query_id is None or topic_num is None:
         return JsonResponse(data={'detail':'Missing query_id or topic'}, status=400)
 
+    if len(Query.objects.filter(id=query_id)) == 0:
+        return JsonResponse(data={'detail':'No such query'}, status=400)
+
     # ask queryhandler to make the search. Provide Authorization key. Can just forward the request body JSON here.
-    response = requests.post(f'{settings.QUERYHANDLER_URL}search/', headers={'Authorization':settings.QUERYHANDLER_KEY}, json=data)
+    response = requests.post('http://127.0.0.1:8000/queryhandler/search/', headers={'Authorization':settings.QUERYHANDLER_KEY}, json=data)
 
     # oops
     if response.status_code != 200:
         return JsonResponse(data={'detail':'Search failed'}, status=500)
 
     r = response.json()
+    r2 = {k: v for k, v in r.items() if k not in ['was_new', 'id']}
     # forward the response.
-    return JsonResponse(data=r, status=200)
+    log_signal.send(sender=None, user_id=request.user.id, query_id=query_id, serp_id=r['id'], serp_was_new=r['was_new'], desc="Searched")
+    return JsonResponse(data=r2, status=200)
 
 @require_POST
 @requires_authentication
@@ -281,6 +293,7 @@ def modify_completion(request):
 
     c.save()
 
+    log_signal.send(sender=None, user_id=request.user.id, query_id=query_id, completion_id=c.id, completion_idx=topic_id, desc="Completion modified")
     return JsonResponse(data={'detail':'success'}, status=200)
     
 
