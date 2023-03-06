@@ -24,7 +24,7 @@ def query_generation_model(model, query_topic, user_id):
         response_topics = parse(previous_queries[0].skeleton)
         # increment the found Query's num_searched field.
         previous_queries[0].searched()
-        return response_topics, previous_queries[0]
+        return response_topics, previous_queries[0], False
 
     # idk why this is here, might be able to move it out of the function
     openai.api_key = settings.OPENAI_API_KEY
@@ -59,4 +59,4 @@ def query_generation_model(model, query_topic, user_id):
     q = Query(user_id=user_id, query_text=query_topic, num_tokens=response['usage']['total_tokens'], skeleton=response_topics)
     q.save() # always do this!
 
-    return response_topics, q
+    return response_topics, q, True
