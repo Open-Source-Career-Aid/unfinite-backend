@@ -77,7 +77,7 @@ def attach_links(skeleton, query):
 
 def serphouse(search_string):
 
-    token = settings.SERPHOUSE_KEY
+    token = settings.SCRAPING_KEY
 
     params = {
         'q': search_string,
@@ -103,4 +103,33 @@ def serphouse(search_string):
 
     return pairs
 
+
+def scrapingrobot(search_string):
+
+    token = settings.SCRAPING_KEY
+
+    body = {
+        'url': 'https://www.google.com/',
+        'module': 'GoogleScraper',
+        'params':
+        {
+            'query': search_string
+        }
+    }
+
+    headers = {
+        "accept": "application/json",
+        "content-type": "application/json"
+    }
+
+    url = f'https://api.scrapingrobot.com/?token={token}'
+
+    response = requests.post(url, headers=headers, json=body).json()
+    #print(response['results'])
+
+    organic = response['result']['organicResults'][:10] # here, a limit of 10 is imposed. Consider changing.
+
+    pairs = list(map(lambda x: (x['url'], html.unescape(x['title'])), organic))
+
+    return pairs
 
