@@ -26,7 +26,7 @@ STATIC_ROOT= BASE_DIR / 'static/'
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = str(os.getenv('SECRET_KEY'))
-SERPHOUSE_KEY = str(os.getenv('SERPHOUSE_KEY'))
+SCRAPING_KEY = str(os.getenv('SCRAPING_KEY'))
 
 # key for authentication between api and queryhandler
 QUERYHANDLER_KEY = str(os.getenv('QUERYHANDLER_KEY'))
