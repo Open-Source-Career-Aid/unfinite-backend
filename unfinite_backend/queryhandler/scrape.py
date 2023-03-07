@@ -77,7 +77,7 @@ def attach_links(skeleton, query):
 
 def serphouse(search_string):
 
-    token = settings.SCRAPING_KEY
+    token = settings.SERPHOUSE_KEY
 
     params = {
         'q': search_string,

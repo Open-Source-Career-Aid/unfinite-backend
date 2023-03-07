@@ -27,7 +27,7 @@ STATICFILES_DIRS = [BASE_DIR / 'unfinitefront/unfinitebeta/build/static', BASE_D
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY') #'django-insecure-($lmox_2f&n4d85n9becwy26(@4=b7rc&*#+!5-aff7vi$u(+e'
-#SERPHOUSE_KEY = str(os.getenv('SERPHOUSE_KEY'))
+SERPHOUSE_KEY = str(os.getenv('SERPHOUSE_KEY'))
 SCRAPING_KEY = str(os.getenv('SCRAPING_KEY'))
 
 # key for authentication between api and queryhandler
