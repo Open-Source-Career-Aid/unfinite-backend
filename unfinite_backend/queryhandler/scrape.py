@@ -136,30 +136,30 @@ def scrapingrobot(search_string):
 
 def scrapeitserp(search_string):
 
-    conn = http.client.HTTPSConnection("api.scrape-it.cloud")
+    #conn = http.client.HTTPSConnection("api.scrape-it.cloud")
 
-    payload = json.dumps({
+    payload = {
         "country": "US",
         "domain": "com",
         "num_results": 10,
         "keyword": search_string
-    })
+    }
 
     headers = {
     'x-api-key': '1a2d5eb0-83f9-4310-8bca-b1332c2b97f9',
     'Content-Type': 'application/json'
     }
 
-    conn.request("POST", "/scrape/google", payload, headers)
+    res = requests.post("https://api.scrape-it.cloud/scrape/google", json=payload, headers=headers)
     
-    res = conn.getresponse()
+    #res = conn.getresponse()
     
-    data = res.read()
+    #data = res.read()
     
     # print(data.decode("utf-8"))
     
     # convert data into a JSON response
-    data = json.loads(data.decode("utf-8"))
+    data = res.json() #json.loads(data.decode("utf-8"))
     
     print(data)
     
