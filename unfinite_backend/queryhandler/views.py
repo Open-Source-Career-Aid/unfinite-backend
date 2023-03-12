@@ -4,7 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from .openai_api import query_generation_model
 import json
-from .scrape import attach_links, google_SERP, serphouse, scrapingrobot
+from .scrape import attach_links, google_SERP, serphouse, scrapingrobot, scrapeitserp
 # Create your views here.
 
 # eventually, when the apps are on different machines,
@@ -82,7 +82,7 @@ def search(request):
 
     if len(s) == 0:
         # no existing SERP - just gotta scrape it!
-        serp = serphouse(search_string) # scrape
+        serp = scrapeitserp(search_string) # scrape
         new_serp = SERP(search_string=search_string, entries=json.dumps(serp)) # new SERP
         new_serp.save()
         new_serp.queries.add(q) # relate to the query

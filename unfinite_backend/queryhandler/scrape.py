@@ -2,6 +2,7 @@ import bs4, requests, json
 from django.apps import apps
 from django.conf import settings
 import html
+import http.client
 
 
 #Feedback = apps.get_model('api', 'Feedback')
@@ -133,3 +134,37 @@ def scrapingrobot(search_string):
 
     return pairs
 
+def scrapeitserp(search_string):
+
+    conn = http.client.HTTPSConnection("api.scrape-it.cloud")
+
+    payload = json.dumps({
+        "country": "US",
+        "domain": "com",
+        "num_results": 10,
+        "keyword": search_string
+    })
+
+    headers = {
+    'x-api-key': '1a2d5eb0-83f9-4310-8bca-b1332c2b97f9',
+    'Content-Type': 'application/json'
+    }
+
+    conn.request("POST", "/scrape/google", payload, headers)
+    
+    res = conn.getresponse()
+    
+    data = res.read()
+    
+    # print(data.decode("utf-8"))
+    
+    # convert data into a JSON response
+    data = json.loads(data.decode("utf-8"))
+    
+    print(data)
+    
+    organic = data['scrapingResult']['organic'][:10]
+
+    pairs = list(map(lambda x: (x['url'], html.unescape(x['title'])), organic))
+
+    return pairs
