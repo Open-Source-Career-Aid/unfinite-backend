@@ -46,6 +46,8 @@ class UnfiniteUser(AbstractUser):
     is_beta = models.BooleanField(default=False)
     register_date = models.DateField(auto_now=True)
 
+    #in_progress = models.ManyToManyField('Query')
+
     username = None
     email = models.EmailField(_('email address'), unique=True)
 
@@ -107,6 +109,7 @@ class SERP(models.Model):
 
     search_string = models.TextField()
     queries = models.ManyToManyField(Query)
+    idx = models.IntegerField()
     entries = models.TextField()
     created = models.DateField()
     updated = models.DateField()
@@ -122,6 +125,8 @@ class SERPFeedback(models.Model):
     user = models.ForeignKey(UnfiniteUser, on_delete=models.SET_NULL, primary_key=False, null=True)
     query = models.ForeignKey(Query, on_delete=models.SET_NULL, null=True)
     serp = models.ForeignKey(SERP, on_delete=models.SET_NULL, null=True)
+    topic_idx = models.IntegerField()
+    serp_idx = models.IntegerField()
     resource = models.TextField()
 
     THUMBUP = 'TU'
@@ -179,6 +184,7 @@ class Completion(models.Model):
     query = models.ForeignKey(Query, on_delete=models.SET_NULL, null=True)
 
     completion = models.TextField()
+    track = models.BooleanField(default=False)
 
     created = models.DateField()
     updated = models.DateField()

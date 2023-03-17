@@ -240,7 +240,7 @@ def serp_feedback(request):
         return JsonResponse(data={'detail':'no such serp'}, status=400)
 
     resource = json.loads(serp.entries)[serp_idx]
-    f = SERPFeedback.objects.create(user=request.user, query=q, serp=serp, rating=thumbs[thumb], resource=json.dumps(resource))
+    f = SERPFeedback.objects.create(user=request.user, query=q, serp=serp, rating=thumbs[thumb], resource=json.dumps(resource), serp_idx=serp_idx, topic_idx=topic_idx)
     f.save()
 
     return JsonResponse({'detail':'Feedback submitted'}, status=200)
@@ -259,7 +259,23 @@ def get_completion(request):
     else:
         c = cs[0]
     
-    return JsonResponse(data={'completion':json.dumps(c.completion)}, status=200)
+    return JsonResponse(data={'completion':json.dumps(c.completion), 'track': c.track}, status=200)
+
+@require_POST
+@requires_authentication
+def track_completion(request):
+
+    query_id = json.loads(request.body).get('id')
+
+    cs = Completion.objects.get(query_id=query_id, user=request.user)
+
+    cs.track = 1-cs.track
+    cs.save()
+
+    if cs.track == 1:
+        return JsonResponse(data={'detail':'Now tracking this completion.', 'status':200}, status=200)
+    
+    return JsonResponse(data={'detail':'No longer tracking this completion.', 'status':200}, status=200)
 
 @require_POST
 @requires_authentication
@@ -305,3 +321,77 @@ def create_blank_completion(query_id, user_id):
     c.save()
 
     return c
+
+
+# @require_POST
+# @requires_authentication
+# def track(request):
+
+#     data = json.loads(request.body)
+#     query_id = data.get('id')
+
+#     if query_id is None: return JsonResponse(data={'detail':'No query_id provided'}, status=400)
+
+#     qs = Query.objects.filter(id=query_id)
+
+#     if not len(qs): return JsonResponse(data={'detail':'No such query'}, status=400)
+
+#     q = qs[0]
+
+#     request.user.in_progress.add(q)
+
+#     return JsonResponse(data={'detail':'Query successfully tracked!'}, status=200)
+
+
+# @requires_authentication
+# def get_tracking(request):
+
+#     out = []
+
+#     for query in request.user.in_progress.all():
+
+#         completion = json.loads(Completion.objects.get(user=request.user, query=query).completion)
+#         out.append({'query_text':query.query_text, 'completion':completion})
+
+#     return JsonResponse(data={'completions':json.dumps(out)}, status=200)
+
+@requires_authentication
+def get_tracking_completions(request):
+
+    cs = Completion.objects.filter(user=request.user, track=1)
+    #[print(x.query.id, x.query.query_text, x.completion) for x in cs]
+
+    return JsonResponse(data={'completions':[{'id':c.query.id, 'title':c.query.query_text, 'completion':json.dumps(c.completion)} for c in cs]}, status=200)
+
+
+@requires_authentication
+def get_thumbs(request):
+
+    query_id = request.GET.get('id', '')
+    topic_idx = request.GET.get('topic', '')
+
+    if query_id == '' or topic_idx == '': return JsonResponse(data={'detail':'No query_id or topic provided'}, status=400)
+
+
+    if not Query.objects.filter(id=query_id).exists():
+
+        return JsonResponse(data={'detail':'No such query'}, status=400)
+
+    q = Query.objects.get(id=query_id)
+
+    s = SERP.objects.get(query=q, idx=topic)
+
+    fbs = sorted(SERPFeedback.objects.filter(query=query, serp=s, user=request.user), key=lambda x: x.serp_idx)
+
+    out = []
+    m = ['TU', 'TD', 'TN']
+
+    j = 0
+    for i in range(len(json.loads(s.entries))):
+        if fbs[j].serp_idx == i:
+            out.append(m.index(fbs[j].rating))
+            j += 1
+            continue
+        out.append(2)
+
+    return JsonResponse(data={'thumbs':json.dumps(out)}, status=200)
