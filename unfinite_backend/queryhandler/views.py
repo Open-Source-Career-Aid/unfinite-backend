@@ -4,7 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from .openai_api import query_generation_model
 import json
-from .scrape import attach_links, google_SERP, serphouse, scrapingrobot, scrapeitserp
+from .scrape import attach_links, google_SERP, serphouse, scrapingrobot, scrapeitserp, bingapi
 # Create your views here.
 
 # eventually, when the apps are on different machines,

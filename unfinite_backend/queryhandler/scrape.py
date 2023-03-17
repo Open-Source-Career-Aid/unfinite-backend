@@ -3,6 +3,8 @@ from django.apps import apps
 from django.conf import settings
 import html
 import http.client
+import os 
+from pprint import pprint
 
 
 #Feedback = apps.get_model('api', 'Feedback')
@@ -168,3 +170,37 @@ def scrapeitserp(search_string):
     pairs = list(map(lambda x: (x['url'], html.unescape(x['title'])), organic))
 
     return pairs
+    
+def bingapi(query):
+
+    # Add your Bing Search V7 subscription key and endpoint to your environment variables.
+    subscription_key = ''
+    endpoint = "https://api.bing.microsoft.com/v7.0/search"
+
+    # Construct a request
+    mkt = 'en-US'
+    params = { 'q': query, 'mkt': mkt }
+    headers = { 'Ocp-Apim-Subscription-Key': subscription_key }
+
+    # Call the API
+    try:
+
+        response = requests.get(endpoint, headers=headers, params=params)
+        response.raise_for_status()
+
+        # print("Headers:")
+        # print(response.headers)
+        # print("JSON Response:")
+        # pprint(response.json())
+
+        results = response.json()['webPages']['value']
+
+        # print(results)
+
+        pairs = list(map(lambda x: (x['url'], html.unescape(x['name'])), results))
+
+        return pairs
+
+
+    except Exception as ex:
+        raise ex

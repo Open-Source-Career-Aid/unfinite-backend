@@ -259,7 +259,22 @@ def get_completion(request):
     else:
         c = cs[0]
     
-    return JsonResponse(data={'completion':json.dumps(c.completion)}, status=200)
+    return JsonResponse(data={'completion':json.dumps(c.completion), 'track':c.track}, status=200)
+
+@requires_authentication
+def track_completion(request):
+
+    query_id = request.GET.get('id', '')
+
+    cs = Completion.objects.get(query__in=[query_id], user__in=[request.user.id])
+
+    cs.track = 1-cs.track
+    cs.save()
+
+    if cs.track == 1:
+        return JsonResponse(data={'detail':'Now tracking this completion.', 'status':200}, status=200)
+    else:
+        return JsonResponse(data={'detail':'No longer tracking this completion.', 'status':200}, status=200)
 
 @require_POST
 @requires_authentication
