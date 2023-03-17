@@ -179,6 +179,7 @@ class Completion(models.Model):
     query = models.ForeignKey(Query, on_delete=models.SET_NULL, null=True)
 
     completion = models.TextField()
+    track = models.BooleanField(default=False)
 
     created = models.DateField()
     updated = models.DateField()

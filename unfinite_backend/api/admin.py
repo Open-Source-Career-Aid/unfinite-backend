@@ -86,7 +86,7 @@ class SERPFeedbackAdmin(admin.ModelAdmin):
 
 @admin.register(Completion)
 class CompletionAdmin(admin.ModelAdmin):
-    list_display = ('user','query','completion')
+    list_display = ('user','query','completion', 'track')
 
 @admin.register(EventLog)
 class EventLogAdmin(admin.ModelAdmin):
