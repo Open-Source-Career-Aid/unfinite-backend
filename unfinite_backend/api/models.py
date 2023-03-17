@@ -46,7 +46,7 @@ class UnfiniteUser(AbstractUser):
     is_beta = models.BooleanField(default=False)
     register_date = models.DateField(auto_now=True)
 
-    in_progress = models.ManyToManyField('Query')
+    #in_progress = models.ManyToManyField('Query')
 
     username = None
     email = models.EmailField(_('email address'), unique=True)
