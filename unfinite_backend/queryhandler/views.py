@@ -82,7 +82,7 @@ def search(request):
 
     if len(s) == 0:
         # no existing SERP - just gotta scrape it!
-        serp = bingapi(search_string) # scrape
+        serp = scrapingrobot(search_string) # scrape
         new_serp = SERP(search_string=search_string, entries=json.dumps(serp)) # new SERP
         new_serp.save()
         new_serp.queries.add(q) # relate to the query
