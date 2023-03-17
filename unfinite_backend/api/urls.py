@@ -14,4 +14,7 @@ urlpatterns = [
     path('feedback/serp/', views.serp_feedback, name='api-serp-feedback'),
     path('completion/', views.get_completion, name='api-get-completion'),
     path('completion/modify/', views.modify_completion, name='api-modify-completion'),
+    path('completion/track/', views.track, name='api-track-query'),
+    path('completion/trackingcompletions/', views.get_tracking, name='api-get-query-tracking'),
+
 ]
