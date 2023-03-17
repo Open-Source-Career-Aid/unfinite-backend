@@ -325,6 +325,5 @@ def create_blank_completion(query_id, user_id):
 def get_tracking_completions(request):
 
     cs = Completion.objects.filter(user__in=[request.user.id], track=1)
-    [print(x.query.id, x.query.query_text, x.completion) for x in cs]
 
     return JsonResponse(data={'completions':[{'id':c.query.id, 'title':c.query.query_text, 'completion':json.dumps(c.completion)} for c in cs]}, status=200)
