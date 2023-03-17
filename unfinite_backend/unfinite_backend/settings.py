@@ -34,7 +34,7 @@ SCRAPING_KEY = str(os.getenv('SCRAPING_KEY'))
 QUERYHANDLER_KEY = str(os.getenv('QUERYHANDLER_KEY'))
 QUERYHANDLER_URL = str(os.getenv('QUERYHANDLER_URL'))
 
-BING_KEY = str(os.getenve('BING_KEY'))
+BING_KEY = str(os.getenv('BING_KEY'))
 
 # get openai api key
 OPENAI_API_KEY = str(os.getenv('OPENAI_API_KEY'))
