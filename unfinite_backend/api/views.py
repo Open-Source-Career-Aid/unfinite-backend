@@ -187,6 +187,34 @@ def search(request):
 
 @require_POST
 @requires_authentication
+def questions(request):
+
+    data = json.loads(request.body)
+    query_id = data.get('id')
+    topic_num = data.get('topic')
+
+    # all fields must be provided!
+    if query_id is None or topic_num is None:
+        return JsonResponse(data={'detail':'Missing query_id or topic'}, status=400)
+    
+    if len(Query.objects.filter(id=query_id)) == 0:
+        return JsonResponse(data={'detail':'No such query'}, status=400)
+    
+    # ask queryhandler to get the questions. Provide Authorization key. Can just forward the request body JSON here.
+    response = requests.post(f'{settings.QUERYHANDLER_URL}questions/', headers={'Authorization':settings.QUERYHANDLER_KEY}, json=data)
+
+    # oops
+    if response.status_code != 200:
+        return JsonResponse(data={'detail':'Questions failed'}, status=500)
+    
+    r = response.json()
+    r2 = {k: v for k, v in r.items() if k not in ['was_new', 'id']}
+    # forward the response.
+    # log_signal.send(sender=None, user_id=request.user.id, query_id=query_id, questions_id=r['id'], questions_was_new=r['was_new'], desc="Questions")
+    return JsonResponse(data=r2, status=200)
+
+@require_POST
+@requires_authentication
 def query_feedback(request):
 
     data = json.loads(request.body)

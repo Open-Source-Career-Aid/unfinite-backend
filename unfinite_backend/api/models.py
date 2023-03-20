@@ -209,3 +209,40 @@ class EventLog(models.Model):
     desc = models.TextField()
 
     created = models.DateTimeField(auto_now_add=True)
+
+class Topic(models.Model):
+
+    query = models.ForeignKey(Query, on_delete=models.SET_NULL, null=True)
+    topic_text = models.TextField()
+    topic_index_in_query = models.IntegerField(blank=True, null=True)
+
+    created = models.DateField()
+    updated = models.DateField()
+
+    def save(self, *args, **kwargs):
+        ''' On save, update timestamps '''
+        if not self.id:
+            self.created = timezone.now()
+        self.updated = timezone.now()
+        return super(Topic, self).save(*args, **kwargs)
+
+class Relevantquestions(models.Model):
+
+    query = models.ForeignKey(Query, on_delete=models.SET_NULL, null=True)
+    topic = models.ForeignKey(Topic, on_delete=models.SET_NULL, null=True)
+    questions = models.TextField()
+    num_searched = models.IntegerField(default=1)
+
+    created = models.DateField()
+    updated = models.DateField()
+
+    def searched(self):
+        self.num_searched += 1
+        return super(Relevantquestions, self).save()
+
+    def save(self, *args, **kwargs):
+        ''' On save, update timestamps '''
+        if not self.id:
+            self.created = timezone.now()
+        self.updated = timezone.now()
+        return super(Relevantquestions, self).save(*args, **kwargs)

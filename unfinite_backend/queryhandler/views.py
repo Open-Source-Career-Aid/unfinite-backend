@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
-from .openai_api import query_generation_model
+from .openai_api import query_generation_model, questions_generation_model
 import json
 from .scrape import attach_links, google_SERP, serphouse, scrapingrobot, scrapeitserp, bingapi
 # Create your views here.
@@ -97,3 +97,35 @@ def search(request):
         s = s[0]
 
     return JsonResponse(data={'serp': serp, 'id':s.id, 'was_new': was_new}, status=200)
+
+@csrf_exempt
+@require_internal
+def questions(request):
+    '''
+        getquestions takes a request from the API, providing a Query id and an index into its skeleton.
+        It then generates relevant questions using GPT4 and returns them.
+    '''
+
+    d = json.loads(request.body)
+
+    query_id = d['id']
+    topic_num = d['topic']
+
+    # find the query object with id query_id
+    qs = Query.objects.filter(id=query_id)
+    if len(qs) == 0:
+        return JsonResponse(data={'detail':f'Query with ID {query_id} doesn\'t exist'}, status=500)
+    
+    q = qs[0] # there's only one of such Query objs
+    skeleton = json.loads(q.skeleton) # load its skeleton
+
+    if topic_num >= len(skeleton): # make sure that topic_num is a valid index into the skeleton
+        return JsonResponse(data={'detail':f'Invalid topic {topic_num}'}, status=500)
+    
+    q_text = q.query_text
+    t_text = skeleton[topic_num]
+
+    # generate questions
+    questions, rq, was_new = questions_generation_model('gpt-4', t_text, q_text)
+
+    return JsonResponse(data={'questions': questions, 'id': rq.id, 'was_new':was_new}, status=200)
