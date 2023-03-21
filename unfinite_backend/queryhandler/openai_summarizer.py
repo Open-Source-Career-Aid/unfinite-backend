@@ -108,7 +108,7 @@ def getpageobjects(listofurls, driver):
                     nextentry=''
                 # print(element.name, ":", element.get_text(strip=True))
 
-    print('\n\n\n Got data from the urls! \n\n\n')
+    #print('\n\n\n Got data from the urls! \n\n\n')
 
     return data
 
@@ -132,12 +132,12 @@ def getpageobjects_p(url, driver):
                 nextentry=''
             # print(element.name, ":", element.get_text(strip=True))
 
-    print('\n\n\n Got data from the urls! \n\n\n')
+    #print('\n\n\n Got data from the urls! \n\n\n')
 
     return data
 
 def generateembedding(chunkoftext, engine='text-embedding-ada-002'):
-    print(f"Generating embedding for {chunkoftext}!!!\n\n\n")
+    #print(f"Generating embedding for {chunkoftext}!!!\n\n\n")
     response = openai.Embedding.create(input=chunkoftext,engine=engine)
     vector = response['data'][0]['embedding']  # this is a normal list
     return vector
@@ -146,13 +146,13 @@ def cosinesimilarity(v1, v2):
     return np.dot(v1, v2)
 
 def vectorsearch(query, vectordatabase, n=3):
-    print('\n\n\n VECTOR SEARCH!!! \n\n\n')
+    #print('\n\n\n VECTOR SEARCH!!! \n\n\n')
     vector = generateembedding(query)
     similarities = [(i, cosinesimilarity(vector, vectordatabase[i]['vector'])) for i in range(len(vectordatabase))]
     return sorted(similarities, key=lambda x: x[1])[0:n]
 
 def gpt3_completion(prompt, engine='text-davinci-003', temp=0.6, top_p=1.0, tokens=2500, freq_pen=0.25, pres_pen=0.0):
-    print("Generating completion!")
+    #print("Generating completion!")
     max_retry = 5
     retry = 0
     prompt = prompt.encode(encoding='ASCII',errors='ignore').decode()
@@ -244,7 +244,7 @@ def summary_generation_model(questionidx, topicidx, query, summarymodel='text-da
     with Pool(5) as p:
         dictofdata = list(itertools.chain.from_iterable(p.map(f, searchurls)))
 
-    print("pool done")
+    #print("pool done")
 
     embeddings = assign_vectors(dictofdata, engine=embeddingmodel)
     for embedding in embeddings:
@@ -257,7 +257,7 @@ def summary_generation_model(questionidx, topicidx, query, summarymodel='text-da
     for i in range(len(sortedresults)):
         
         dictofchunks[sortedresults[i][0]] = summarizechunk(dictofdata[sortedresults[i][0]]['text'], query=summaryquery, model=summarymodel)
-        print(dictofchunks[sortedresults[i][0]])
+        #print(dictofchunks[sortedresults[i][0]])
 
     finalsummary = summarize(summaryquery, dictofchunks, model=summarymodel)
 

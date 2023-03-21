@@ -8,6 +8,10 @@ django-import-export
 python-dotenv
 mysqlclient==2.0.3
 html2text
+readability
 selenium
+urllib
 langdetect
+re
+time
 numpy
