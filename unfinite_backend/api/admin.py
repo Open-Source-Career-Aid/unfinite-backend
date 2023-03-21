@@ -96,6 +96,6 @@ class EventLogAdmin(admin.ModelAdmin):
 class RelevantquestionsAdmin(admin.ModelAdmin):
     list_display = ('query', 'idx', 'questions')
 
-@admin.register(Summary)
+@admin.register(QuestionSummary)
 class SummaryAdmin(admin.ModelAdmin):
     list_display = ('query', 'summary')

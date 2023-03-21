@@ -2,7 +2,7 @@ import requests, html2text
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from readability import Document
+# from readability import Document
 from urllib.parse import urljoin
 from langdetect import detect
 import html
@@ -75,9 +75,9 @@ def contentfinder(url, driver):
         article = soup.find("main")
 
     # If the <article>, <div>, <section>, or <main> tags are not found, use a content extraction library
-    if not article:
-        doc = Document(response.text)
-        article = BeautifulSoup(doc.summary(html_partial=True), "html.parser")
+    # if not article:
+    #     doc = Document(response.text)
+    #     article = BeautifulSoup(doc.summary(html_partial=True), "html.parser")
     
     driver.quit()
 
@@ -224,7 +224,7 @@ def summary_generation_model(questionidx, topicidx, query, summarymodel='text-da
 
     summaryquery = f'{question}'
 
-    searchurls = [x[0] for x in bingapi(summaryquery)]
+    searchurls = [x[0] for x in scrapingrobot(summaryquery)]
 
     with Pool(5) as p:
         dictofdata = list(itertools.chain.from_iterable(p.map(f, searchurls)))
@@ -233,7 +233,7 @@ def summary_generation_model(questionidx, topicidx, query, summarymodel='text-da
     for embedding in embeddings:
         dictofdata[embedding['index']]['vector'] = embedding['embedding']
 
-    sortedresults = vectorsearch(userquery, dictofdata)
+    sortedresults = vectorsearch(summaryquery, dictofdata)
 
     dictofchunks = {}
 
