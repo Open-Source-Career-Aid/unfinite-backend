@@ -212,10 +212,13 @@ def summarizechunk_p(x, model):
 
 def summary_generation_model(questionidx, topicidx, query, summarymodel='text-davinci-003', embeddingmodel='text-embedding-ada-002'):
     
-    previoussummary = QuestionSummary.objects.get(questionidx=questionidx, idx=topicidx, query=query)
-    if len(previoussummary.summary) == 1:
+    # print(1)
+    previoussummary = QuestionSummary.objects.filter(questionidx=questionidx, idx=topicidx, query=query)
+    
+    if len(previoussummary) == 1:
         return previoussummary[0].summary, previoussummary[0], True
     
+    # print(2)
     relevantquestions = Relevantquestions.objects.get(query=query, idx=topicidx)
     if len(relevantquestions.questions) == 0:
         raise Exception("No relevant questions found for this topic!")
@@ -244,7 +247,9 @@ def summary_generation_model(questionidx, topicidx, query, summarymodel='text-da
 
     finalsummary = summarize(summaryquery, dictofchunks, model=summarymodel)
 
-    s = QuestionSummary(questionidx=questionidx, idx=topicidx, query=query, summary=finalsummary)
+    # print(3)
+
+    s = QuestionSummary.objects.create(questionidx=questionidx, idx=topicidx, query=query, summary=finalsummary)
     s.save()
 
     return finalsummary, s, False
