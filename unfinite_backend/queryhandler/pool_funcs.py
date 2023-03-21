@@ -96,7 +96,7 @@ def getpageobjects_p(url):
                 nextentry=''
             # print(element.name, ":", element.get_text(strip=True))
 
-    print('\n\n\n Got data from the urls! \n\n\n')
+    #print('\n\n\n Got data from the urls! \n\n\n')
 
     return data
 
