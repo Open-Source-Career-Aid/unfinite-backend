@@ -6,7 +6,6 @@ from .models import *
 from django.apps import apps
 Query = apps.get_model('api', 'Query')
 Relevantquestions = apps.get_model('api', 'Relevantquestions')
-Topic = apps.get_model('api', 'Topic')
 
 def parse(str):
     # takes the output of an LLM and parses it, assumes str is semicolon separated 
@@ -63,9 +62,9 @@ def query_generation_model(model, query_topic, user_id):
 
     return response_topics, q, True
 
-def questions_generation_model(model, topic_text, query_text):
+def questions_generation_model(model, idx, query_text):
     
-    previous_relevant_questions = Relevantquestions.objects.filter(topic__topic_text=topic_text, query__query_text=query_text)
+    previous_relevant_questions = Relevantquestions.objects.filter(idx=idx, query__query_text=query_text)
     if len(previous_relevant_questions) == 1:
         #print('existing relevant questions found')
         response_questions = parse(previous_relevant_questions[0].questions)
@@ -73,8 +72,16 @@ def questions_generation_model(model, topic_text, query_text):
         previous_relevant_questions[0].searched()
         return response_questions, previous_relevant_questions[0], False
     
+    query = Query.objects.filter(query_text=query_text)[0]
+    topic_text = json.loads(query.skeleton)[idx]
+    # if len(topic) == 0:
+    #     topic = Topic(topic_text=topic_text, query=query, topic_index_in_query=topic_index_in_query)
+    #     topic.save()
+    
     # idk why this is here, might be able to move it out of the function
-    openai.api_key = 'sk-xxxxxxxxxxxxk1auVAEcpGej'
+    openai.api_key = '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'
+
+    prompt = f"user prompt: {topic_text} in {query_text}"
 
     messages = [{
         "role": "user",
@@ -110,7 +117,7 @@ def questions_generation_model(model, topic_text, query_text):
     },
     {
         "role": "user",
-        "content": "user prompt: python in django"
+        "content": prompt
     }]
 
     temperature = 0.2
@@ -137,21 +144,10 @@ def questions_generation_model(model, topic_text, query_text):
         print(e)
         return None, None
 
-    query = Query.objects.filter(query_text=query_text)[0]
-    topic_index_in_query = query.skeleton.index(topic_text)
-    # topic = Topic.objects.filter(topic_text=topic_text)
-    topic, created = Topic.objects.get_or_create(topic_text=topic_text, defaults={
-    'query': query, 
-    'topic_index_in_query': topic_index_in_query,
-    })
-    # if len(topic) == 0:
-    #     topic = Topic(topic_text=topic_text, query=query, topic_index_in_query=topic_index_in_query)
-    #     topic.save()
-
     response_questions = json.dumps(parse(response['choices'][0]['message']['content']))
 
     # new Relevantquestions in database!
-    q = Relevantquestions(topic=topic, query=query, questions=response_questions)
+    q = Relevantquestions(idx=idx, query=query, questions=response_questions, generation_prompt=prompt)
     q.save() # always do this!
 
     return response_questions, q, True

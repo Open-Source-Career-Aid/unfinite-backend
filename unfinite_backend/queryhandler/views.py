@@ -3,6 +3,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from .openai_api import query_generation_model, questions_generation_model
+from .openai_summarizer import summary_generation_model
 import json
 from .scrape import attach_links, google_SERP, serphouse, scrapingrobot, scrapeitserp, bingapi
 # Create your views here.
@@ -13,6 +14,7 @@ from .scrape import attach_links, google_SERP, serphouse, scrapingrobot, scrapei
 from django.apps import apps
 Query = apps.get_model('api', 'Query')
 SERP = apps.get_model('api', 'SERP')
+Relevantquestions = apps.get_model('api', 'Relevantquestions')
 
 def require_internal(func):
     # cool and nice wrapper that keeps anybody other than the API from making 
@@ -123,9 +125,43 @@ def questions(request):
         return JsonResponse(data={'detail':f'Invalid topic {topic_num}'}, status=500)
     
     q_text = q.query_text
-    t_text = skeleton[topic_num]
 
     # generate questions
-    questions, rq, was_new = questions_generation_model('gpt-4', t_text, q_text)
+    questions, rq, was_new = questions_generation_model('gpt-4', topic_num, q_text)
 
     return JsonResponse(data={'questions': questions, 'id': rq.id, 'was_new':was_new}, status=200)
+
+@csrf_exempt
+@require_internal
+def summary(request):
+
+    d = json.loads(request.body)
+    
+    query_id = d['id']
+    topic_num = d['topic']
+    ques_num = d['question']
+
+    # find the query object with id query_id
+    qs = Query.objects.filter(id=query_id)
+    if len(qs) == 0:
+        return JsonResponse(data={'detail':f'Query with ID {query_id} doesn\'t exist'}, status=500)
+    
+    q = qs[0]
+
+    skeleton = json.loads(q.skeleton)
+
+    if topic_num >= len(skeleton): # make sure that topic_num is a valid index into the skeleton
+        return JsonResponse(data={'detail':f'Invalid topic {topic_num}'}, status=500)
+
+    rs = Relevantquestions.objects.filter(query=q, idx=topic_num)
+    if len(rs) == 0:
+        return JsonResponse(data={'detail':f'No relevant questions for topic {topic_num}'}, status=500)
+    
+    r = rs[0]
+
+    questions = json.loads(r.questions)[ques_num]
+
+    # generate summary
+    summary, s, was_new = summary_generation_model(ques_num, topic_num, q)
+
+    return JsonResponse(data={'summary': summary, 'id': s.id, 'was_new':was_new}, status=200)

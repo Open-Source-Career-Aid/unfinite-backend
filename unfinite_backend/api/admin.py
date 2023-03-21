@@ -92,10 +92,10 @@ class CompletionAdmin(admin.ModelAdmin):
 class EventLogAdmin(admin.ModelAdmin):
     list_display = ('user','desc',)
 
-@admin.register(Topic)
-class TopicAdmin(admin.ModelAdmin):
-    list_display = ('topic_text', 'query', 'topic_index_in_query')
-
 @admin.register(Relevantquestions)
 class RelevantquestionsAdmin(admin.ModelAdmin):
-    list_display = ('topic', 'query', 'questions')
+    list_display = ('query', 'idx', 'questions')
+
+@admin.register(Summary)
+class SummaryAdmin(admin.ModelAdmin):
+    list_display = ('query', 'summary')
