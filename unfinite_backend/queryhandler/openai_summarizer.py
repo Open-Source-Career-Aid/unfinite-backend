@@ -18,6 +18,8 @@ from django.conf import settings
 from .models import *
 from .scrape import attach_links, google_SERP, serphouse, scrapingrobot, scrapeitserp, bingapi
 
+from .pool_funcs import f
+
 from django.apps import apps
 Query = apps.get_model('api', 'Query')
 Relevantquestions = apps.get_model('api', 'Relevantquestions')
@@ -32,9 +34,9 @@ def contentfinder(url, driver):
     ## should be set up in the main script
     # ==========
     # # Set up a headless Chrome browser instance with Selenium
-    chrome_options = Options()
-    chrome_options.add_argument('--headless')
-    driver = webdriver.Chrome(driver, options=chrome_options)
+    # chrome_options = Options()
+    # chrome_options.add_argument('--headless')
+    # driver = webdriver.Chrome(driver, options=chrome_options)
 
     # Send a GET request to the URL and parse the HTML content with BeautifulSoup
     headers = {
@@ -92,6 +94,7 @@ def getpageobjects(listofurls, driver):
     for url in listofurls:
         nextentry = ''
         article = contentfinder(url, driver)[0]
+        if article is None: continue
         for element in article.find_all():
             # Check if the element is part of the readable article content and has a valid tag name
             if element.name in valid_tags:
@@ -100,7 +103,7 @@ def getpageobjects(listofurls, driver):
                 if len(nextentry)>2000:
                     if len(nextentry)>4000:
                         continue
-                    data[i] = {'text':nextentry, 'url':url, 'vector':generateembedding(nextentry)}
+                    data[i] = {'text':nextentry, 'url':url, 'vector': None}
                     i+=1
                     nextentry=''
                 # print(element.name, ":", element.get_text(strip=True))
@@ -116,6 +119,7 @@ def getpageobjects_p(url, driver):
     valid_tags = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'li']
     nextentry = ''
     article = contentfinder(url, driver)[0]
+    if article is None: return data
     for element in article.find_all():
         # Check if the element is part of the readable article content and has a valid tag name
         if element.name in valid_tags:
@@ -198,12 +202,19 @@ def summarize(query, dictofchunks, model):
 
     return gpt3_completion(text, engine=model)
 
-def f(x): return getpageobjects_p(x, 'chromedriver')
+
 
 def assign_vectors(data, engine='text-embedding-ada-002'):
 
+    # id_text = [(k, v['text']) for k, v in data.items()]
+    # text = list(map(lambda x: x[1], id_text))
+    # response = openai.Embedding.create(input=text,engine=engine)
+    # id_emb = [(id_text[d['index']][0], d['embedding']) for d in response['data']]
     text = [d['text'] for d in data]
+    #text = list(map(lambda x: x[1], id_text))
     response = openai.Embedding.create(input=text,engine=engine)
+    #id_emb = [(id_text[d['index']][0], d['embedding']) for d in response['data']]
+
     return response['data']
 
 def summarizechunk_p(x, model):
@@ -211,9 +222,13 @@ def summarizechunk_p(x, model):
     return summarizechunk(x[0], query=x[1], model=model)
 
 def summary_generation_model(questionidx, topicidx, query, summarymodel='text-davinci-003', embeddingmodel='text-embedding-ada-002'):
+
+    #chrome_options = Options() # faster to start the driver just once, not once per call to contentfinder...
+    #chrome_options.add_argument('--headless')
+    #driver = webdriver.Chrome('chromedriver', options=chrome_options)
     
-    previoussummary = QuestionSummary.objects.get(questionidx=questionidx, idx=topicidx, query=query)
-    if len(previoussummary.summary) == 1:
+    previoussummary = QuestionSummary.objects.filter(questionidx=questionidx, idx=topicidx, query=query)
+    if len(previoussummary) == 1:
         return previoussummary[0].summary, previoussummary[0], True
     
     relevantquestions = Relevantquestions.objects.get(query=query, idx=topicidx)
@@ -225,9 +240,11 @@ def summary_generation_model(questionidx, topicidx, query, summarymodel='text-da
     summaryquery = f'{question}'
 
     searchurls = [x[0] for x in scrapingrobot(summaryquery)]
-
+    #dictofdata = getpageobjects(searchurls, driver)
     with Pool(5) as p:
         dictofdata = list(itertools.chain.from_iterable(p.map(f, searchurls)))
+
+    print("pool done")
 
     embeddings = assign_vectors(dictofdata, engine=embeddingmodel)
     for embedding in embeddings:

@@ -138,11 +138,11 @@ def questions_generation_model(model, idx, query_text):
     except openai.error.RateLimitError as e:
         print("OpenAI API rate limit error! See below:")
         print(e)
-        return None, None
+        return None, None, None
     except Exception as e:
         print("Unknown OpenAI API error! See below:")
         print(e)
-        return None, None
+        return None, None, None
 
     response_questions = json.dumps(parse(response['choices'][0]['message']['content']))
 
