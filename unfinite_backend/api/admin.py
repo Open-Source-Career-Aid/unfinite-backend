@@ -98,4 +98,4 @@ class RelevantquestionsAdmin(admin.ModelAdmin):
 
 @admin.register(QuestionSummary)
 class SummaryAdmin(admin.ModelAdmin):
-    list_display = ('query', 'summary')
+    list_display = ('query', 'urls', 'urlidx', 'summary')
