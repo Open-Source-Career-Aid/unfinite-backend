@@ -43,7 +43,7 @@ def query(request):
     '''
     d = json.loads(request.body) # this assumes that the API sent a well-formed request. TODO: maybe check here...
 
-    skeleton, q, was_new = query_generation_model('text-davinci-003', d.get('query_text'), d.get('user_id'))
+    skeleton, q, was_new = query_generation_model('gpt-4', d.get('query_text'), d.get('user_id'))
 
     if skeleton is None: # :(
         return JsonResponse({'detail':'failure'}, status=500)

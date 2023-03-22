@@ -11,7 +11,7 @@ def parse(str):
     # takes the output of an LLM and parses it, assumes str is semicolon separated 
     return list(map(lambda x: x.strip().strip('.'), str.strip().split(';')))
 
-def query_generation_model(model, query_topic, user_id):
+def query_generation_model_old(model, query_topic, user_id):
     # takes a topic to query (query_topic) as a string and either returns an existing 
     # skeleton, or requests OpenAI's <model> to come up with one. Requires user_id
     # in order to instantiate a new Query object...
@@ -55,6 +55,85 @@ def query_generation_model(model, query_topic, user_id):
     # response['usage'] = {'total_tokens':69}
     
     response_topics = json.dumps(parse(response['choices'][0]['text']))
+
+    # new Query in database!
+    q = Query(user_id=user_id, query_text=query_topic, num_tokens=response['usage']['total_tokens'], skeleton=response_topics)
+    q.save() # always do this!
+
+    return response_topics, q, True
+
+def query_generation_model(model, query_topic, user_id):
+    # takes a topic to query (query_topic) as a string and either returns an existing 
+    # skeleton, or requests OpenAI's <model> to come up with one. Requires user_id
+    # in order to instantiate a new Query object...
+
+    # TODO: this is messy code, make it nice
+
+    # checking for existing queries with identical query_text
+    previous_queries = Query.objects.filter(query_text=query_topic)
+    if len(previous_queries) == 1:
+        #print('existing query found')
+        response_topics = parse(previous_queries[0].skeleton)
+        # increment the found Query's num_searched field.
+        previous_queries[0].searched()
+        return response_topics, previous_queries[0], False
+
+    # idk why this is here, might be able to move it out of the function
+    openai.api_key = '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'
+
+    prompt = f"prompt: {query_topic}"
+
+    messages = [{
+        "role": "user",
+        "content": "You are an expert learning designer."
+    },
+    {
+        "role": "user",
+        "content": "Provide a roadmap with a list of topics for the learner's prompt. No preamble."
+    },
+    {
+        "role": "user",
+        "content": "The output should be a list of topics separated by a semi-colon, don't use any numbering."
+    },
+    {
+        "role": "user",
+        "content": "Keep the roadmap short and optimised to the prompt. 5-10 topics is ideal."
+    },
+    {
+        "role": "user",
+        "content": prompt
+    }]
+
+    temperature = 0.2
+    max_length = 100
+    top_p = 1.0
+    frequency_penalty = 0.0
+    presence_penalty = 0.0
+
+    # making API request and error checking
+    try:
+        response = openai.ChatCompletion.create(
+            model=model, 
+            messages=messages, 
+            temperature=temperature, 
+            max_tokens=max_length, 
+            top_p=top_p, 
+            frequency_penalty=frequency_penalty, 
+            presence_penalty=presence_penalty)
+    except openai.error.RateLimitError as e:
+        print("OpenAI API rate limit error! See below:")
+        print(e)
+        return None, None, None
+    except Exception as e:
+        print("Unknown OpenAI API error! See below:")
+        print(e)
+        return None, None, None
+
+    # response = {}
+    # response['choices'] = [{'text': "\n\nCancer diagnosis; Cancer staging; Cancer treatment options; Surgery; Radiation therapy; Chemotherapy; Targeted therapy; Immunotherapy; Hormone therapy; Clinical trials; Palliative care; Nutrition and exercise; Coping with cancer."}]
+    # response['usage'] = {'total_tokens':69}
+    
+    response_topics = json.dumps(parse(response['choices'][0]['message']['content']))
 
     # new Query in database!
     q = Query(user_id=user_id, query_text=query_topic, num_tokens=response['usage']['total_tokens'], skeleton=response_topics)
