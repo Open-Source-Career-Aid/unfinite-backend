@@ -112,6 +112,28 @@ def getpageobjects(listofurls, driver):
 
     return data
 
+def getpagetext(listofurls, driver):
+    # Define a list of valid tag names
+    valid_tags = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'li']
+    i = 0
+    for url in listofurls:
+        nextentry = ''
+        article = contentfinder(url, driver)[0]
+        if article is None: continue
+        for element in article.find_all():
+            # Check if the element is part of the readable article content and has a valid tag name
+            if element.name in valid_tags:
+                # Print the name of the element and its text content
+                nextentry = nextentry + element.get_text(strip=True) + '\n'
+                if len(nextentry)>2000:
+                    if len(nextentry)>4000:
+                        continue
+                    return nextentry, listofurls.index(url)
+                # print(element.name, ":", element.get_text(strip=True))
+
+    #print('\n\n\n Got data from the urls! \n\n\n')
+    return '', None
+
 def getpageobjects_p(url, driver):
 
     data = []
@@ -151,7 +173,7 @@ def vectorsearch(query, vectordatabase, n=3):
     similarities = [(i, cosinesimilarity(vector, vectordatabase[i]['vector'])) for i in range(len(vectordatabase))]
     return sorted(similarities, key=lambda x: x[1])[0:n]
 
-def gpt3_completion(prompt, engine='text-davinci-003', temp=0.6, top_p=1.0, tokens=2500, freq_pen=0.25, pres_pen=0.0):
+def gpt3_completion(prompt, engine='text-davinci-003', temp=0.6, top_p=1.0, tokens=3000, freq_pen=0.25, pres_pen=0.0):
     #print("Generating completion!")
     max_retry = 5
     retry = 0
@@ -221,7 +243,7 @@ def summarizechunk_p(x, model):
 
     return summarizechunk(x[0], query=x[1], model=model)
 
-def summary_generation_model(questionidx, topicidx, query, summarymodel='text-davinci-003', embeddingmodel='text-embedding-ada-002'):
+def summary_generation_model_old(questionidx, topicidx, query, summarymodel='text-davinci-003', embeddingmodel='text-embedding-ada-002'):
 
     #chrome_options = Options() # faster to start the driver just once, not once per call to contentfinder...
     #chrome_options.add_argument('--headless')
@@ -239,7 +261,7 @@ def summary_generation_model(questionidx, topicidx, query, summarymodel='text-da
 
     summaryquery = f'{question}'
 
-    searchurls = [x[0] for x in scrapingrobot(summaryquery)]
+    searchurls = [x[0] for x in bingapi(summaryquery)]
     #dictofdata = getpageobjects(searchurls, driver)
     with Pool(5) as p:
         dictofdata = list(itertools.chain.from_iterable(p.map(f, searchurls)))
@@ -263,5 +285,44 @@ def summary_generation_model(questionidx, topicidx, query, summarymodel='text-da
 
     s = QuestionSummary(questionidx=questionidx, idx=topicidx, query=query, summary=finalsummary)
     s.save()
+
+    return finalsummary, s, False
+
+def summary_generation_model(questionidx, topicidx, query, summarymodel='text-davinci-003', embeddingmodel='text-embedding-ada-002'):
+
+    chrome_options = Options() # faster to start the driver just once, not once per call to contentfinder...
+    chrome_options.add_argument('--headless')
+    driver = webdriver.Chrome('chromedriver', options=chrome_options)
+    
+    previoussummary = QuestionSummary.objects.filter(questionidx=questionidx, idx=topicidx, query=query)
+    if len(previoussummary) == 1:
+        return previoussummary[0].summary, previoussummary[0], True
+    
+    relevantquestions = Relevantquestions.objects.get(query=query, idx=topicidx)
+    if len(relevantquestions.questions) == 0:
+        raise Exception("No relevant questions found for this topic!")
+    
+    question = json.loads(relevantquestions.questions)[questionidx]
+
+    summaryquery = f'{question}'
+
+    searchurls = [x[0] for x in bingapi(summaryquery)]
+
+    pagedata, urlidx = getpagetext(searchurls, driver=driver)
+
+    text = f'''Summarize the following text into a detailed answer to the given question. Make it easy for the reader to understand.:
+    
+    Question: {question}
+    
+    Text: {pagedata}
+    
+    Summary:'''
+
+    finalsummary = gpt3_completion(text, engine=summarymodel)
+
+    s = QuestionSummary(questionidx=questionidx, idx=topicidx, query=query, summary=finalsummary, urls=json.dumps(searchurls), urlidx=urlidx)
+    s.save()
+
+    driver.quit()
 
     return finalsummary, s, False

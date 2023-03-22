@@ -240,6 +240,8 @@ class QuestionSummary(models.Model):
     idx = models.IntegerField()
     questionidx = models.IntegerField()
     summary = models.TextField()
+    urlidx = models.TextField(default=None, blank=True, null=True)
+    urls = models.TextField(default=None, blank=True, null=True)
 
     created = models.DateField()
     updated = models.DateField()

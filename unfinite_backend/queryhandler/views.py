@@ -164,4 +164,4 @@ def summary(request):
     # generate summary
     summary, s, was_new = summary_generation_model(ques_num, topic_num, q)
 
-    return JsonResponse(data={'summary': summary, 'id': s.id, 'was_new':was_new}, status=200)
+    return JsonResponse(data={'summary': summary, 'urls':s.urls, 'urlidx':s.urlidx, 'id': s.id, 'was_new':was_new}, status=200)
