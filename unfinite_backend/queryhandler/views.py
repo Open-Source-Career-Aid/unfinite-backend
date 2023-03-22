@@ -2,7 +2,8 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
-from .openai_api import query_generation_model
+from .openai_api import query_generation_model, questions_generation_model
+from .openai_summarizer import summary_generation_model
 import json
 from .scrape import attach_links, google_SERP, serphouse, scrapingrobot, scrapeitserp, bingapi
 # Create your views here.
@@ -13,6 +14,7 @@ from .scrape import attach_links, google_SERP, serphouse, scrapingrobot, scrapei
 from django.apps import apps
 Query = apps.get_model('api', 'Query')
 SERP = apps.get_model('api', 'SERP')
+Relevantquestions = apps.get_model('api', 'Relevantquestions')
 
 def require_internal(func):
     # cool and nice wrapper that keeps anybody other than the API from making 
@@ -82,7 +84,7 @@ def search(request):
 
     if len(s) == 0:
         # no existing SERP - just gotta scrape it!
-        serp = bingapi(search_string) # scrape
+        serp = scrapingrobot(search_string) # scrape
         new_serp = SERP(search_string=search_string, entries=json.dumps(serp), idx=topic_num) # new SERP
         new_serp.save()
         new_serp.queries.add(q) # relate to the query
@@ -97,3 +99,69 @@ def search(request):
         s = s[0]
 
     return JsonResponse(data={'serp': serp, 'id':s.id, 'was_new': was_new}, status=200)
+
+@csrf_exempt
+@require_internal
+def questions(request):
+    '''
+        getquestions takes a request from the API, providing a Query id and an index into its skeleton.
+        It then generates relevant questions using GPT4 and returns them.
+    '''
+
+    d = json.loads(request.body)
+
+    query_id = d['id']
+    topic_num = d['topic']
+
+    # find the query object with id query_id
+    qs = Query.objects.filter(id=query_id)
+    if len(qs) == 0:
+        return JsonResponse(data={'detail':f'Query with ID {query_id} doesn\'t exist'}, status=500)
+    
+    q = qs[0] # there's only one of such Query objs
+    skeleton = json.loads(q.skeleton) # load its skeleton
+
+    if topic_num >= len(skeleton): # make sure that topic_num is a valid index into the skeleton
+        return JsonResponse(data={'detail':f'Invalid topic {topic_num}'}, status=500)
+    
+    q_text = q.query_text
+
+    # generate questions
+    questions, rq, was_new = questions_generation_model('gpt-4', topic_num, q_text)
+
+    return JsonResponse(data={'questions': questions, 'id': rq.id, 'was_new':was_new}, status=200)
+
+@csrf_exempt
+@require_internal
+def summary(request):
+
+    d = json.loads(request.body)
+    
+    query_id = d['id']
+    topic_num = d['topic']
+    ques_num = d['question']
+
+    # find the query object with id query_id
+    qs = Query.objects.filter(id=query_id)
+    if len(qs) == 0:
+        return JsonResponse(data={'detail':f'Query with ID {query_id} doesn\'t exist'}, status=500)
+    
+    q = qs[0]
+
+    skeleton = json.loads(q.skeleton)
+
+    if topic_num >= len(skeleton): # make sure that topic_num is a valid index into the skeleton
+        return JsonResponse(data={'detail':f'Invalid topic {topic_num}'}, status=500)
+
+    rs = Relevantquestions.objects.filter(query=q, idx=topic_num)
+    if len(rs) == 0:
+        return JsonResponse(data={'detail':f'No relevant questions for topic {topic_num}'}, status=500)
+    
+    r = rs[0]
+
+    questions = json.loads(r.questions)[ques_num]
+
+    # generate summary
+    summary, s, was_new = summary_generation_model(ques_num, topic_num, q)
+
+    return JsonResponse(data={'summary': summary, 'urls':s.urls, 'urlidx':s.urlidx, 'id': s.id, 'was_new':was_new}, status=200)

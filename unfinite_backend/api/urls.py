@@ -16,5 +16,7 @@ urlpatterns = [
     path('completion/modify/', views.modify_completion, name='api-modify-completion'),
     path('completion/track/', views.track_completion, name='api-track-query'),
     path('completion/trackingcompletions/', views.get_tracking_completions, name='api-get-query-tracking'),
-    path('feedback/serp/get/', views.get_thumbs, name='api-get-thumbs')
+    path('feedback/serp/get/', views.get_thumbs, name='api-get-thumbs'),
+    path('questions/', views.questions, name='api-questions'),
+    path('summary/', views.summary, name='api-summary'),
 ]

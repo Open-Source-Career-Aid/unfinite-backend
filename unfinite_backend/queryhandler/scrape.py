@@ -174,7 +174,7 @@ def scrapeitserp(search_string):
 def bingapi(query):
 
     # Add your Bing Search V7 subscription key and endpoint to your environment variables.
-    subscription_key = settings.BING_KEY
+    subscription_key = '5d1e3393acd3451997ce5c4cb7ec8255'
     endpoint = "https://api.bing.microsoft.com/v7.0/search"
 
     # Construct a request

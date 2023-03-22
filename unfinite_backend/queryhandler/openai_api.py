@@ -5,6 +5,7 @@ from .models import *
 
 from django.apps import apps
 Query = apps.get_model('api', 'Query')
+Relevantquestions = apps.get_model('api', 'Relevantquestions')
 
 def parse(str):
     # takes the output of an LLM and parses it, assumes str is semicolon separated 
@@ -60,3 +61,93 @@ def query_generation_model(model, query_topic, user_id):
     q.save() # always do this!
 
     return response_topics, q, True
+
+def questions_generation_model(model, idx, query_text):
+    
+    previous_relevant_questions = Relevantquestions.objects.filter(idx=idx, query__query_text=query_text)
+    if len(previous_relevant_questions) == 1:
+        #print('existing relevant questions found')
+        response_questions = parse(previous_relevant_questions[0].questions)
+        # increment the found Relevantquestions's num_searched field.
+        previous_relevant_questions[0].searched()
+        return response_questions, previous_relevant_questions[0], False
+    
+    query = Query.objects.filter(query_text=query_text)[0]
+    topic_text = json.loads(query.skeleton)[idx]
+    # if len(topic) == 0:
+    #     topic = Topic(topic_text=topic_text, query=query, topic_index_in_query=topic_index_in_query)
+    #     topic.save()
+    
+    # idk why this is here, might be able to move it out of the function
+    openai.api_key = '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'
+
+    prompt = f"user prompt: {topic_text} in {query_text}"
+
+    messages = [{
+        "role": "user",
+        "content": "You are an expert learning designer."
+    },
+    {
+        "role": "user",
+        "content": "Take in the user prompt, and break it down into questions to guide the user's learning, with no preamble."
+    },
+    {
+        "role": "assistant",
+        "content": "What kind of questions?"
+    },
+    {
+        "role": "user",
+        "content": "The questions should be in a logical order and be specific to the user prompt."
+    },
+    {
+        "role": "assistant",
+        "content": "Okay, and how specific should I go?"
+    },
+    {
+        "role": "user",
+        "content": "Try to capture all the learnable information about the user prompt in as little number questions as possible."
+    },
+    {
+        "role": "assistant",
+        "content": "Okay, what format should I out put in?"
+    },
+    {
+        "role": "user",
+        "content": "Seperate questions with a semi-colon, don't use any lists."
+    },
+    {
+        "role": "user",
+        "content": prompt
+    }]
+
+    temperature = 0.2
+    max_length = 150
+    top_p = 1.0
+    frequency_penalty = 0.3
+    presence_penalty = 0.0
+
+    try:
+        response = openai.ChatCompletion.create(
+            model=model, 
+            messages=messages, 
+            temperature=temperature, 
+            max_tokens=max_length, 
+            top_p=top_p, 
+            frequency_penalty=frequency_penalty, 
+            presence_penalty=presence_penalty)
+    except openai.error.RateLimitError as e:
+        print("OpenAI API rate limit error! See below:")
+        print(e)
+        return None, None, None
+    except Exception as e:
+        print("Unknown OpenAI API error! See below:")
+        print(e)
+        return None, None, None
+
+    response_questions = json.dumps(parse(response['choices'][0]['message']['content']))
+
+    # new Relevantquestions in database!
+    q = Relevantquestions(idx=idx, query=query, questions=response_questions, generation_prompt=prompt)
+    q.save() # always do this!
+
+    return response_questions, q, True

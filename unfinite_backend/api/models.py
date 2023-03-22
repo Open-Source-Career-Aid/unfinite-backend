@@ -209,3 +209,46 @@ class EventLog(models.Model):
     desc = models.TextField()
 
     created = models.DateTimeField(auto_now_add=True)
+
+class Relevantquestions(models.Model):
+
+    query = models.ForeignKey(Query, on_delete=models.SET_NULL, null=True)
+    # index of the topic in the query
+    idx = models.IntegerField(default=None)
+    questions = models.TextField()
+    num_searched = models.IntegerField(default=1)
+    generation_prompt = models.TextField(default=None, blank=True, null=True)
+
+    created = models.DateField()
+    updated = models.DateField()
+
+    def searched(self):
+        self.num_searched += 1
+        return super(Relevantquestions, self).save()
+
+    def save(self, *args, **kwargs):
+        ''' On save, update timestamps '''
+        if not self.id:
+            self.created = timezone.now()
+        self.updated = timezone.now()
+        return super(Relevantquestions, self).save(*args, **kwargs)
+
+class QuestionSummary(models.Model):
+
+    query = models.ForeignKey(Query, on_delete=models.SET_NULL, null=True)
+    # index of the topic in the query
+    idx = models.IntegerField()
+    questionidx = models.IntegerField()
+    summary = models.TextField()
+    urlidx = models.TextField(default=None, blank=True, null=True)
+    urls = models.TextField(default=None, blank=True, null=True)
+
+    created = models.DateField()
+    updated = models.DateField()
+
+    def save(self, *args, **kwargs):
+        ''' On save, update timestamps '''
+        if not self.id:
+            self.created = timezone.now()
+        self.updated = timezone.now()
+        return super(QuestionSummary, self).save(*args, **kwargs)
