@@ -13,3 +13,4 @@ selenium
 langdetect
 numpy
 tldextract
+whitenoise
