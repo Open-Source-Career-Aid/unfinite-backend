@@ -468,13 +468,17 @@ def summary_generation_model(questionidx, topicidx, query, summarymodel='text-da
     summaries = list(itertools.chain.from_iterable(map(lambda x: x[0], tuples)))
     relevanturls = list(itertools.chain.from_iterable(map(lambda x: x[1], tuples)))
 
-    prompt = """Please summarize the following texts, which are in the format text_id: text_content, into a concise and coherent answer to the question. Additionally, please include in-text numbered citations of the form [id] for any relevant sources cited in the answer. Don't procide references in the end. start a list with 1. and end it with 2. and so on.
+    prompt = """Please summarize the following texts, which are in the format text_id: text_content, into a concise and coherent answer to the question.
     
     """
     for i in range(len(summaries)):
-        prompt+=f'text_{i}: {summaries[i]}\n'
+        prompt+=f'text_{i}: {summaries[i]}\n\n'
 
-    prompt+=f'Question: {summaryquery}\nAnswer:'
+    prompt+=f'''Question: {summaryquery}
+    
+    Instructions: 1. Please include in-text numbered citations of the form [id] for any relevant sources cited in the answer. 2. Don't add references at the end of the answer. 3. Structure the answer into multiple paragraphs where necessary. 4. Don't use additional numbers for citations apart from the provided text ids.
+    
+    Answer:'''
 
     finalsummary = gpt3_completion(prompt, engine=summarymodel)
 
