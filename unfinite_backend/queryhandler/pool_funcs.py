@@ -100,6 +100,31 @@ def getpageobjects_p(url):
 
     return data
 
+def getpagetext_p(url):
+    # Define a list of valid tag names
+    valid_tags = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'li']
+    i = 0
+    for url in listofurls:
+        nextentry = ''
+        article = contentfinder(url)[0]
+        if article is None: continue
+        for element in article.find_all():
+            # Check if the element is part of the readable article content and has a valid tag name
+            if element.name in valid_tags:
+                # Print the name of the element and its text content
+                nextentry = nextentry + element.get_text(strip=True) + '\n'
+                if len(nextentry)>2000:
+                    if len(nextentry)>4000:
+                        continue
+                    return nextentry, listofurls.index(url)
+                # print(element.name, ":", element.get_text(strip=True))
 
-def f(x): return getpageobjects_p(x)
+    #print('\n\n\n Got data from the urls! \n\n\n')
+    return '', None
+
+
+def f(x): 
+    o = getpageobjects_p(x)
+    driver.close()
+    return o
 

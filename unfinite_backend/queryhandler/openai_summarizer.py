@@ -310,6 +310,8 @@ def summary_generation_model(questionidx, topicidx, query, summarymodel='text-da
 
     pagedata, urlidx = getpagetext(searchurls, driver=driver)
 
+    print(pagedata, urlidx)
+
     text = f'''Summarize the following text into a detailed answer to the given question. Make it easy for the reader to understand.:
     
     Question: {question}
