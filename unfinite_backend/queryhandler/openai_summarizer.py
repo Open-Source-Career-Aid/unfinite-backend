@@ -17,9 +17,13 @@ from django.http import JsonResponse
 from django.conf import settings
 from .models import *
 from .scrape import attach_links, google_SERP, serphouse, scrapingrobot, scrapeitserp, bingapi
-
-from .pool_funcs import f
-
+import nltk
+from nltk.tokenize import sent_tokenize, word_tokenize
+from nltk.corpus import stopwords
+from string import punctuation
+from collections import defaultdict
+from math import log10
+from .pool_funcs import f, pooled_scrape
 from django.apps import apps
 Query = apps.get_model('api', 'Query')
 Relevantquestions = apps.get_model('api', 'Relevantquestions')
@@ -86,6 +90,53 @@ def contentfinder(url, driver):
     # Returns the parsed article content
     return article, title, lang
 
+def contentfinder_noJS(url):
+
+    print('finding content for: ', url)
+
+    # Send a GET request to the URL and parse the HTML content with BeautifulSoup
+    headers = {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:55.0) Gecko/20100101 Firefox/55.0',
+    }
+    response = requests.get(url, headers=headers)
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    # Check if the page uses JavaScript
+    try:
+        if "javascript" in soup.find("html").get("class", []):
+            pass
+        else:
+            html = requests.get(url).text
+    except Exception:
+        pass
+
+    article = None
+    t = soup.find('title')
+    title = t.string if t is not None else None
+    try:
+        lang = detect(soup.body.get_text())
+    except Exception:
+        lang = None
+
+    # Look for the <article>, <div>, or <section> tags that contain the main article content
+    article = soup.find("article") or soup.find("div", class_="article") or soup.find("section", class_="article")
+
+    # If the <article>, <div>, or <section> tags are not found, look for elements with specific CSS classes
+    if not article:
+        article = soup.find("div", class_="entry-content") or soup.find("div", class_="main-content")
+
+    # If the <article>, <div>, or <section> tags are not found, look for the <main> tag
+    if not article:
+        article = soup.find("main")
+
+    # If the <article>, <div>, <section>, or <main> tags are not found, use a content extraction library
+    # if not article:
+    #     doc = Document(response.text)
+    #     article = BeautifulSoup(doc.summary(html_partial=True), "html.parser")
+
+    # Returns the parsed article content
+    return article, title, lang
+
 def getpageobjects(listofurls, driver):
     data = {}
     # Define a list of valid tag names
@@ -112,7 +163,7 @@ def getpageobjects(listofurls, driver):
 
     return data
 
-def getpagetext(listofurls, driver):
+def getpagetext_inchunks(listofurls, driver):
     # Define a list of valid tag names
     valid_tags = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'li']
     i = 0
@@ -133,6 +184,22 @@ def getpagetext(listofurls, driver):
 
     #print('\n\n\n Got data from the urls! \n\n\n')
     return '', None
+
+def getpagetext(url):
+    text = ''
+    # Define a list of valid tag names
+    valid_tags = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'li']
+    nextentry = ''
+    article = contentfinder_noJS(url)[0]
+    if article is None: return '', url
+    for element in article.find_all():
+        # Check if the element is part of the readable article content and has a valid tag name
+        if element.name in valid_tags:
+            # Print the name of the element and its text content
+            text+=element.get_text(strip=True) + '\n'
+            # print(element.name, ":", element.get_text(strip=True))
+    print('\n\n\n Got data from the urls! \n\n\n')
+    return (text, url)
 
 def getpageobjects_p(url, driver):
 
@@ -173,7 +240,7 @@ def vectorsearch(query, vectordatabase, n=3):
     similarities = [(i, cosinesimilarity(vector, vectordatabase[i]['vector'])) for i in range(len(vectordatabase))]
     return sorted(similarities, key=lambda x: x[1])[0:n]
 
-def gpt3_completion(prompt, engine='text-davinci-003', temp=0.6, top_p=1.0, tokens=3000, freq_pen=0.25, pres_pen=0.0):
+def gpt3_completion(prompt, engine='text-davinci-003', temp=0.6, top_p=1.0, tokens=500, freq_pen=0.25, pres_pen=0.0):
     #print("Generating completion!")
     max_retry = 5
     retry = 0
@@ -239,6 +306,86 @@ def assign_vectors(data, engine='text-embedding-ada-002'):
 
     return response['data']
 
+def textrank(document, top_n=5):
+    """
+    Extracts the top n sentences from a document using the TextRank algorithm.
+    
+    Args:
+        document (str): The text document to summarize.
+        top_n (int): The number of sentences to extract (default: 5).
+    
+    Returns:
+        summary (str): The summary of the document.
+    """
+    
+    # Tokenize the document into sentences and words
+    sentences = sent_tokenize(document)
+    words = [word_tokenize(sentence.lower()) for sentence in sentences]
+    
+    # Remove stop words and punctuation
+    stop_words = set(stopwords.words('english') + list(punctuation))
+    filtered_words = [[word for word in sentence if word not in stop_words] for sentence in words]
+    
+    # Calculate word frequencies
+    word_frequencies = defaultdict(lambda: 0)
+    for sentence in filtered_words:
+        for word in sentence:
+            word_frequencies[word] += 1
+    try:
+        max_frequency = max(word_frequencies.values())
+    except ValueError:
+        max_frequency = 1
+    for word in word_frequencies.keys():
+        word_frequencies[word] /= max_frequency
+    
+    # Calculate sentence scores
+    sentence_scores = defaultdict(lambda: 0)
+    for i, sentence in enumerate(filtered_words):
+        for word in sentence:
+            sentence_scores[i] += word_frequencies[word]
+        try:
+            sentence_scores[i] /= len(sentence)
+        except ZeroDivisionError:
+            sentence_scores[i] = 0
+    
+    # Extract top n sentences
+    top_sentences = sorted(sentence_scores.items(), key=lambda x: x[1], reverse=True)[:top_n]
+    top_sentences = [(i, sentences[i]) for i, score in top_sentences]
+    top_sentences_in_order_of_occurance = [x[1] for x in sorted(top_sentences, key=lambda x: x[0])]
+    
+    # Join the top sentences into a summary in order of appearance
+    summary = ' '.join(top_sentences_in_order_of_occurance)
+    return summary
+
+def recursivesummariser(listofsummaries, howmanychunks, top_n=3):
+    
+    i = 0
+    moresummaries = []
+    chunk = ''
+    while i<len(listofsummaries):
+        if i%howmanychunks==0 and i!=0:
+            moresummaries.append(textrank(chunk, howmanychunks))
+            chunk=''
+        chunk+=listofsummaries[i]+' '
+        i+=1
+    if len(chunk)!=0:
+        moresummaries.append(textrank(chunk, howmanychunks))
+    return moresummaries
+
+def summarizewithextractive(text, top_n, howmanychunks):
+    
+    paragraphs = [x for x in text.split('\n') if len(x)!=0]
+    
+    summary = []
+    for paragraph in paragraphs:
+        summary.append(textrank(paragraph, top_n+2))
+    
+    summary = [x for x in summary if len(x.split('.'))>=3]
+    
+    finalsummary = '\n'.join(recursivesummariser(summary, howmanychunks, top_n))
+    
+    return finalsummary
+
 def summarizechunk_p(x, model):
 
     return summarizechunk(x[0], query=x[1], model=model)
@@ -290,9 +437,9 @@ def summary_generation_model_old(questionidx, topicidx, query, summarymodel='tex
 
 def summary_generation_model(questionidx, topicidx, query, summarymodel='text-davinci-003', embeddingmodel='text-embedding-ada-002'):
 
-    chrome_options = Options() # faster to start the driver just once, not once per call to contentfinder...
-    chrome_options.add_argument('--headless')
-    driver = webdriver.Chrome('chromedriver', options=chrome_options)
+    # chrome_options = Options() # faster to start the driver just once, not once per call to contentfinder...
+    # chrome_options.add_argument('--headless')
+    # driver = webdriver.Chrome('chromedriver', options=chrome_options)
     
     previoussummary = QuestionSummary.objects.filter(questionidx=questionidx, idx=topicidx, query=query)
     if len(previoussummary) == 1:
@@ -308,21 +455,32 @@ def summary_generation_model(questionidx, topicidx, query, summarymodel='text-da
 
     searchurls = [x[0] for x in bingapi(summaryquery)]
 
-    pagedata, urlidx = getpagetext(searchurls, driver=driver)
+    summaries = []
+    relevanturls = []
+    # for url in searchurls[0:5]:
+    #     pagedata, url = getpagetext(url)
+    #     if len(pagedata)>100: # random number, but if the text is too short, it's probably not useful
+    #         summaries.append(summarizewithextractive(pagedata, 3, 4))
+    #         relevanturls.append(url)
+    with Pool(5) as p:
+        tuples = p.map(pooled_scrape, searchurls)
 
-    text = f'''Summarize the following text into a detailed answer to the given question. Make it easy for the reader to understand.:
-    
-    Question: {question}
-    
-    Text: {pagedata}
-    
-    Summary:'''
+    summaries = list(itertools.chain.from_iterable(map(lambda x: x[0], tuples)))
+    relevanturls = list(itertools.chain.from_iterable(map(lambda x: x[1], tuples)))
 
-    finalsummary = gpt3_completion(text, engine=summarymodel)
+    prompt = """Please summarize the following texts, which are in the format text_id: text_content, into a concise and coherent answer to the question. Additionally, please include in-text numbered citations of the form [id] for any relevant sources cited in the answer. Don't procide references in the end. start a list with 1. and end it with 2. and so on.
+    
+    """
+    for i in range(len(summaries)):
+        prompt+=f'text_{i}: {summaries[i]}\n'
 
-    s = QuestionSummary(questionidx=questionidx, idx=topicidx, query=query, summary=finalsummary, urls=json.dumps(searchurls), urlidx=urlidx)
+    prompt+=f'Question: {summaryquery}\nAnswer:'
+
+    finalsummary = gpt3_completion(prompt, engine=summarymodel)
+
+    s = QuestionSummary(questionidx=questionidx, idx=topicidx, query=query, summary=finalsummary, urls=json.dumps(relevanturls))
     s.save()
 
-    driver.quit()
+    # driver.quit()
 
     return finalsummary, s, False

@@ -11,7 +11,7 @@ def parse(str):
     # takes the output of an LLM and parses it, assumes str is semicolon separated 
     return list(map(lambda x: x.strip().strip('.'), str.strip().split(';')))
 
-def query_generation_model_old(model, query_topic, user_id):
+def query_generation_model(model, query_topic, user_id):
     # takes a topic to query (query_topic) as a string and either returns an existing 
     # skeleton, or requests OpenAI's <model> to come up with one. Requires user_id
     # in order to instantiate a new Query object...
@@ -62,7 +62,7 @@ def query_generation_model_old(model, query_topic, user_id):
 
     return response_topics, q, True
 
-def query_generation_model(model, query_topic, user_id):
+def query_generation_model_gpt4(model, query_topic, user_id):
     # takes a topic to query (query_topic) as a string and either returns an existing 
     # skeleton, or requests OpenAI's <model> to come up with one. Requires user_id
     # in order to instantiate a new Query object...
