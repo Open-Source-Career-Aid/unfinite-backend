@@ -23,7 +23,7 @@ from nltk.corpus import stopwords
 from string import punctuation
 from collections import defaultdict
 from math import log10
-from .pool_funcs import f
+from .pool_funcs import f, pooled_scrape
 from django.apps import apps
 Query = apps.get_model('api', 'Query')
 Relevantquestions = apps.get_model('api', 'Relevantquestions')
@@ -457,11 +457,16 @@ def summary_generation_model(questionidx, topicidx, query, summarymodel='text-da
 
     summaries = []
     relevanturls = []
-    for url in searchurls[0:5]:
-        pagedata, url = getpagetext(url)
-        if len(pagedata)>100: # random number, but if the text is too short, it's probably not useful
-            summaries.append(summarizewithextractive(pagedata, 3, 4))
-            relevanturls.append(url)
+    # for url in searchurls[0:5]:
+    #     pagedata, url = getpagetext(url)
+    #     if len(pagedata)>100: # random number, but if the text is too short, it's probably not useful
+    #         summaries.append(summarizewithextractive(pagedata, 3, 4))
+    #         relevanturls.append(url)
+    with Pool(5) as p:
+        tuples = p.map(pooled_scrape, searchurls)
+
+    summaries = list(itertools.chain.from_iterable(map(lambda x: x[0], tuples)))
+    relevanturls = list(itertools.chain.from_iterable(map(lambda x: x[1], tuples)))
 
     prompt = """Please summarize the following texts, which are in the format text_id: text_content, into a concise and coherent answer to the question. Additionally, please include in-text numbered citations of the form [id] for any relevant sources cited in the answer. Don't procide references in the end. start a list with 1. and end it with 2. and so on.
     
