@@ -16,3 +16,4 @@ re
 time
 numpy
 tldextract
+nltk
