@@ -463,7 +463,7 @@ def summary_generation_model(questionidx, topicidx, query, summarymodel='text-da
     #         summaries.append(summarizewithextractive(pagedata, 3, 4))
     #         relevanturls.append(url)
     with Pool(5) as p:
-        tuples = p.map(pooled_scrape, searchurls)
+        tuples = p.map(pooled_scrape, searchurls[:5])
 
     summaries = list(itertools.chain.from_iterable(map(lambda x: x[0], tuples)))
     relevanturls = list(itertools.chain.from_iterable(map(lambda x: x[1], tuples)))
