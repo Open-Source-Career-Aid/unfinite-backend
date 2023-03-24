@@ -370,7 +370,7 @@ def recursivesummariser(listofsummaries, howmanychunks, top_n=3):
         i+=1
     if len(chunk)!=0:
         moresummaries.append(textrank(chunk, howmanychunks))
-    if sum([len(x.split(' ')) for x in moresummaries])>2000:
+    if sum([len(x.split(' ')) for x in moresummaries])>500:
         return recursivesummariser(moresummaries, howmanychunks, top_n)
     return moresummaries
 
