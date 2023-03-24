@@ -528,7 +528,7 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summarym
     prompt = ""
 
     for i in range(len(summaries[:5])):
-        prompt+=f'text {i}: {summaries[i]}\n\n'
+        prompt+=f'text {i+1}: {summaries[i]}\n\n'
 
     prompt+=f'''Question: {summaryquery}
 
