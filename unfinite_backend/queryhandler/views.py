@@ -3,7 +3,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from .openai_api import query_generation_model, questions_generation_model
-from .openai_summarizer import summary_generation_model
+from .openai_summarizer import summary_generation_model, summary_generation_model_gpt3_5_turbo
 import json
 from .scrape import attach_links, google_SERP, serphouse, scrapingrobot, scrapeitserp, bingapi
 # Create your views here.
@@ -162,6 +162,7 @@ def summary(request):
     questions = json.loads(r.questions)[ques_num]
 
     # generate summary
-    summary, s, was_new = summary_generation_model(ques_num, topic_num, q)
+    # summary, s, was_new = summary_generation_model(ques_num, topic_num, q)
+    summary, s, was_new = summary_generation_model_gpt3_5_turbo(ques_num, topic_num, q)
 
     return JsonResponse(data={'summary': summary, 'urls':s.urls, 'urlidx':s.urlidx, 'id': s.id, 'was_new':was_new}, status=200)

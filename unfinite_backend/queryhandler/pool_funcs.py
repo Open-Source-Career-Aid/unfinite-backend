@@ -20,9 +20,9 @@ from math import log10
 
 # DJANGO MUST NOT BE IMPORTED IN THIS FILE!!! it will be broken by the pooling that happens here...
 
-chrome_options = Options() # faster to start the driver just once, not once per call to contentfinder...
-chrome_options.add_argument('--headless')
-driver = webdriver.Chrome('chromedriver', options=chrome_options)
+# chrome_options = Options() # faster to start the driver just once, not once per call to contentfinder...
+# chrome_options.add_argument('--headless')
+# driver = webdriver.Chrome('chromedriver', options=chrome_options)
 def contentfinder(url):#, driver):
 
     # print('finding content for: ', url)
