@@ -370,6 +370,8 @@ def recursivesummariser(listofsummaries, howmanychunks, top_n=3):
         i+=1
     if len(chunk)!=0:
         moresummaries.append(textrank(chunk, howmanychunks))
+    if sum([len(x.split(' ')) for x in moresummaries])>2000:
+        return recursivesummariser(moresummaries, howmanychunks, top_n)
     return moresummaries
 
 def summarizewithextractive(text, top_n, howmanychunks):
@@ -471,7 +473,7 @@ def summary_generation_model(questionidx, topicidx, query, summarymodel='text-da
     prompt = """Please summarize the following texts, which are in the format text_id: text_content, into a concise and coherent answer to the question.
     
     """
-    for i in range(len(summaries)):
+    for i in range(len(summaries[:3])):
         prompt+=f'text_{i}: {summaries[i]}\n\n'
 
     prompt+=f'''Question: {summaryquery}
@@ -482,7 +484,7 @@ def summary_generation_model(questionidx, topicidx, query, summarymodel='text-da
 
     finalsummary = gpt3_completion(prompt, engine=summarymodel)
 
-    s = QuestionSummary(questionidx=questionidx, idx=topicidx, query=query, summary=finalsummary, urls=json.dumps(relevanturls))
+    s = QuestionSummary(questionidx=questionidx, idx=topicidx, query=query, summary=finalsummary, urls=json.dumps(relevanturls[:3]))
     s.save()
 
     # driver.quit()
