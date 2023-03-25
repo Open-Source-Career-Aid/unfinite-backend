@@ -46,9 +46,9 @@ CORS_ORIGIN_WHITELIST = ['http://localhost:3000'] # For development of the front
 # NOTE: hopefully default cache is fine for django-ratelimit?
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG')=="True"
+DEBUG = os.getenv('DEBUG')=="False"
 
-ALLOWED_HOSTS = ['app.unfinite.co', 'localhost', '3.19.61.62', '127.0.0.1']
+ALLOWED_HOSTS = ['app.unfinite.co', 'localhost', '3.19.61.62', '127.0.0.1', '3.135.226.130']
 
 #CSRF_COOKIE_SAMESITE = 'Strict'
 SESSION_COOKIE_SAMESITE = 'Strict'
@@ -57,7 +57,7 @@ SESSION_COOKIE_HTTPONLY = True
 
 #CSRF_HEADER_NAME = "HTTP_X_CSRFTOKEN"
 
-CSRF_TRUSTED_ORIGINS = ['http://localhost:3000'] # For dev. prod: https://app.unfinite.co
+CSRF_TRUSTED_ORIGINS = ['http://localhost:3000', '3.135.226.130'] # For dev. prod: https://app.unfinite.co
 
 # Enable for production, forces HTTPS for cookies:
 # CSRF_COOKIE_SECURE = True
