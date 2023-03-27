@@ -25,6 +25,7 @@ from collections import defaultdict
 from math import log10
 from .pool_funcs import f, pooled_scrape
 from django.apps import apps
+from .messages import definemessages
 Query = apps.get_model('api', 'Query')
 Relevantquestions = apps.get_model('api', 'Relevantquestions')
 QuestionSummary = apps.get_model('api', 'QuestionSummary')
@@ -492,7 +493,7 @@ def summary_generation_model(questionidx, topicidx, query, summarymodel='text-da
 
     return finalsummary, s, False
 
-def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summarymodel='gpt-3.5-turbo'):
+def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summarytype=0, summarymodel='gpt-3.5-turbo'):
 
     # chrome_options = Options() # faster to start the driver just once, not once per call to contentfinder...
     # chrome_options.add_argument('--headless')
@@ -534,26 +535,28 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summarym
 
     Answer:'''
 
-    messages = [{
-        "role": "user",
-        "content": "You are an expert summarizer."
-    },
-    {
-        "role": "user",
-        "content": "Please summarize the following texts, which are in the format id: text_content, into a detailed and coherent answer to the question. 1-2 paragraphs are ideal."
-    },
-    {
-        "role": "user",
-        "content": """Instructions: 
-1. Please include in-text numbered citations of the form [id] for any relevant sources cited in the answer. 
-2. Don't add references at the end of the answer. 
-3. Structure the answer into multiple paragraphs where necessary. 
-4. For numbering a list, use the form 'li1', 'li2', and so on only."""
-    },
-    {
-        "role": "user",
-        "content": prompt
-    }]
+#     messages = [{
+#         "role": "user",
+#         "content": "You are an expert summarizer."
+#     },
+#     {
+#         "role": "user",
+#         "content": "Please summarize the following texts, which are in the format id: text_content, into a detailed and coherent answer to the question. 1-2 paragraphs are ideal."
+#     },
+#     {
+#         "role": "user",
+#         "content": """Instructions: 
+# 1. Please include in-text numbered citations of the form [id] for any relevant sources cited in the answer. 
+# 2. Don't add references at the end of the answer. 
+# 3. Structure the answer into multiple paragraphs where necessary. 
+# 4. For numbering a list, use the form 'li1', 'li2', and so on only."""
+#     },
+#     {
+#         "role": "user",
+#         "content": prompt
+#     }]
+
+    messages = definemessages(prompt, summarytype=summarytype)
 
     temperature = 0.2
     max_length = 500
