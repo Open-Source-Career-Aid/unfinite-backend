@@ -140,6 +140,7 @@ def summary(request):
     query_id = d['id']
     topic_num = d['topic']
     ques_num = d['question']
+    answer_type = d['answertype']
 
     # find the query object with id query_id
     qs = Query.objects.filter(id=query_id)
@@ -163,6 +164,6 @@ def summary(request):
 
     # generate summary
     # summary, s, was_new = summary_generation_model(ques_num, topic_num, q)
-    summary, s, was_new = summary_generation_model_gpt3_5_turbo(ques_num, topic_num, q)
+    summary, s, was_new = summary_generation_model_gpt3_5_turbo(ques_num, topic_num, q, summarytype=int(answer_type))
 
     return JsonResponse(data={'summary': summary, 'urls':s.urls, 'urlidx':s.urlidx, 'id': s.id, 'was_new':was_new}, status=200)
