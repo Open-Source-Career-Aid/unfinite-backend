@@ -20,9 +20,9 @@ from math import log10
 
 # DJANGO MUST NOT BE IMPORTED IN THIS FILE!!! it will be broken by the pooling that happens here...
 
-chrome_options = Options() # faster to start the driver just once, not once per call to contentfinder...
-chrome_options.add_argument('--headless')
-driver = webdriver.Chrome('chromedriver', options=chrome_options)
+# chrome_options = Options() # faster to start the driver just once, not once per call to contentfinder...
+# chrome_options.add_argument('--headless')
+# driver = webdriver.Chrome('chromedriver', options=chrome_options)
 def contentfinder(url):#, driver):
 
     # print('finding content for: ', url)
@@ -192,6 +192,8 @@ def recursivesummariser(listofsummaries, howmanychunks, top_n=3):
         i+=1
     if len(chunk)!=0:
         moresummaries.append(textrank(chunk, howmanychunks))
+    if sum([len(x.split(' ')) for x in moresummaries])>500:
+        return recursivesummariser(moresummaries, howmanychunks, top_n)
     return moresummaries
 
 def summarizewithextractive(text, top_n, howmanychunks):

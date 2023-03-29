@@ -3,7 +3,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from .openai_api import query_generation_model, questions_generation_model
-from .openai_summarizer import summary_generation_model
+from .openai_summarizer import summary_generation_model, summary_generation_model_gpt3_5_turbo
 import json
 from .scrape import attach_links, google_SERP, serphouse, scrapingrobot, scrapeitserp, bingapi
 # Create your views here.
@@ -43,7 +43,7 @@ def query(request):
     '''
     d = json.loads(request.body) # this assumes that the API sent a well-formed request. TODO: maybe check here...
 
-    skeleton, q, was_new = query_generation_model('gpt-4', d.get('query_text'), d.get('user_id'))
+    skeleton, q, was_new = query_generation_model('text-davinci-003', d.get('query_text'), d.get('user_id'))
 
     if skeleton is None: # :(
         return JsonResponse({'detail':'failure'}, status=500)
@@ -140,6 +140,7 @@ def summary(request):
     query_id = d['id']
     topic_num = d['topic']
     ques_num = d['question']
+    answer_type = d['answertype']
 
     # find the query object with id query_id
     qs = Query.objects.filter(id=query_id)
@@ -162,6 +163,7 @@ def summary(request):
     questions = json.loads(r.questions)[ques_num]
 
     # generate summary
-    summary, s, was_new = summary_generation_model(ques_num, topic_num, q)
+    # summary, s, was_new = summary_generation_model(ques_num, topic_num, q)
+    summary, s, was_new = summary_generation_model_gpt3_5_turbo(ques_num, topic_num, q, summarytype=int(answer_type))
 
     return JsonResponse(data={'summary': summary, 'urls':s.urls, 'urlidx':s.urlidx, 'id': s.id, 'was_new':was_new}, status=200)
