@@ -46,7 +46,7 @@ CORS_ORIGIN_WHITELIST = ['http://localhost:3000', '3.135.226.130'] # For develop
 # NOTE: hopefully default cache is fine for django-ratelimit?
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG')=="False"
+DEBUG = os.getenv('DEBUG')=="True"
 
 ALLOWED_HOSTS = ['app.unfinite.co', 'localhost', '3.19.61.62', '127.0.0.1', '3.135.226.130']
 
