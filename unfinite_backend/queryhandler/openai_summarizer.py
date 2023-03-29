@@ -499,20 +499,22 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
     # chrome_options.add_argument('--headless')
     # driver = webdriver.Chrome('chromedriver', options=chrome_options)
     
-    previoussummary = QuestionSummary.objects.filter(questionidx=questionidx, idx=topicidx, query=query)
+    previoussummary = QuestionSummary.objects.filter(questionidx=questionidx, idx=topicidx, query=query, answertype=summarytype)
     if len(previoussummary) == 1:
+        print("found previous summary")
         return previoussummary[0].summary, previoussummary[0], True
     
     relevantquestions = Relevantquestions.objects.get(query=query, idx=topicidx)
     if len(relevantquestions.questions) == 0:
         raise Exception("No relevant questions found for this topic!")
     
+    print("found relevant questions")
     question = json.loads(relevantquestions.questions)[questionidx]
 
     summaryquery = f'{question}'
 
     searchurls = [x[0] for x in bingapi(summaryquery)]
-    print("got urls", flush=True)
+
     summaries = []
     relevanturls = []
     # for url in searchurls[0:5]:
@@ -520,15 +522,12 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
     #     if len(pagedata)>100: # random number, but if the text is too short, it's probably not useful
     #         summaries.append(summarizewithextractive(pagedata, 3, 4))
     #         relevanturls.append(url)
-    #with Pool(5) as p:
-    #    tuples = p.map(pooled_scrape, searchurls[:5])
-    tuples = []
-    for i in range(5): # something slow here
-         tuples.append(pooled_scrape(searchurls[i]))
-    print("starting to join results from pool", flush=True)
+    with Pool(5) as p:
+        tuples = p.map(pooled_scrape, searchurls[:5])
+
     summaries = list(itertools.chain.from_iterable(map(lambda x: x[0], tuples)))
     relevanturls = list(itertools.chain.from_iterable(map(lambda x: x[1], tuples)))
-    print("got all data from pool", flush=True)
+
     prompt = ""
 
     for i in range(len(summaries[:5])):
@@ -558,7 +557,7 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
 #         "role": "user",
 #         "content": prompt
 #     }]
-    print("defining messages", flush=True)
+
     messages = definemessages(prompt, summarytype=summarytype)
 
     temperature = 0.2
@@ -566,7 +565,7 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
     top_p = 1.0
     frequency_penalty = 0.0
     presence_penalty = 0.0
-    print("trying openai", flush=True)
+
     # making API request and error checking
     try:
         response = openai.ChatCompletion.create(
@@ -589,15 +588,15 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
     # response = {}
     # response['choices'] = [{'text': "\n\nCancer diagnosis; Cancer staging; Cancer treatment options; Surgery; Radiation therapy; Chemotherapy; Targeted therapy; Immunotherapy; Hormone therapy; Clinical trials; Palliative care; Nutrition and exercise; Coping with cancer."}]
     # response['usage'] = {'total_tokens':69}
-    print("success!", flush=True)
+    
     finalsummary = response['choices'][0]['message']['content']
     # print(finalsummary)
 
     # finalsummary = gpt3_completion(prompt, engine=summarymodel)
 
-    s = QuestionSummary(questionidx=questionidx, idx=topicidx, query=query, summary=finalsummary, urls=json.dumps(relevanturls[:3]))
+    s = QuestionSummary(questionidx=questionidx, idx=topicidx, query=query, summary=finalsummary, urls=json.dumps(relevanturls[:3]), answertype=summarytype)
     s.save()
 
     # driver.quit()
-    print("done!", flush=True)
+
     return finalsummary, s, False

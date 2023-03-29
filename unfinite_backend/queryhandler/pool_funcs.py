@@ -274,7 +274,7 @@ def getpagetext(url):
     return (text, url)
 
 def pooled_scrape(url):
-    print("began scraping", flush=True)
+
     pagedata, url = getpagetext(url)
     summaries = []
     relevanturls = []
@@ -282,7 +282,7 @@ def pooled_scrape(url):
     if len(pagedata)>100: # random number, but if the text is too short, it's probably not useful
         summaries.append(summarizewithextractive(pagedata, 3, 4))
         relevanturls.append(url)
-    print("done scraping")    
+    
     return (summaries, relevanturls)
 
 

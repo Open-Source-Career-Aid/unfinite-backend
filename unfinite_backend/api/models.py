@@ -242,6 +242,7 @@ class QuestionSummary(models.Model):
     summary = models.TextField()
     urlidx = models.TextField(default=None, blank=True, null=True)
     urls = models.TextField(default=None, blank=True, null=True)
+    answertype = models.IntegerField(default=None, blank=True, null=True)
 
     created = models.DateField()
     updated = models.DateField()
