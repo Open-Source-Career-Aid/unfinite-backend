@@ -25,6 +25,7 @@ from collections import defaultdict
 from math import log10
 from .pool_funcs import f, pooled_scrape
 from django.apps import apps
+from .messages import definemessages
 Query = apps.get_model('api', 'Query')
 Relevantquestions = apps.get_model('api', 'Relevantquestions')
 QuestionSummary = apps.get_model('api', 'QuestionSummary')
@@ -370,6 +371,8 @@ def recursivesummariser(listofsummaries, howmanychunks, top_n=3):
         i+=1
     if len(chunk)!=0:
         moresummaries.append(textrank(chunk, howmanychunks))
+    if sum([len(x.split(' ')) for x in moresummaries])>500:
+        return recursivesummariser(moresummaries, howmanychunks, top_n)
     return moresummaries
 
 def summarizewithextractive(text, top_n, howmanychunks):
@@ -437,6 +440,7 @@ def summary_generation_model_old(questionidx, topicidx, query, summarymodel='tex
 
 def summary_generation_model(questionidx, topicidx, query, summarymodel='text-davinci-003', embeddingmodel='text-embedding-ada-002'):
 
+
     # chrome_options = Options() # faster to start the driver just once, not once per call to contentfinder...
     # chrome_options.add_argument('--headless')
     # driver = webdriver.Chrome('chromedriver', options=chrome_options)
@@ -468,17 +472,127 @@ def summary_generation_model(questionidx, topicidx, query, summarymodel='text-da
     summaries = list(itertools.chain.from_iterable(map(lambda x: x[0], tuples)))
     relevanturls = list(itertools.chain.from_iterable(map(lambda x: x[1], tuples)))
 
-    prompt = """Please summarize the following texts, which are in the format text_id: text_content, into a concise and coherent answer to the question. Additionally, please include in-text numbered citations of the form [id] for any relevant sources cited in the answer. Don't procide references in the end. start a list with 1. and end it with 2. and so on.
+    prompt = """Please summarize the following texts, which are in the format text_id: text_content, into a concise and coherent answer to the question.
     
     """
-    for i in range(len(summaries)):
-        prompt+=f'text_{i}: {summaries[i]}\n'
+    for i in range(len(summaries[:3])):
+        prompt+=f'text_{i}: {summaries[i]}\n\n'
 
-    prompt+=f'Question: {summaryquery}\nAnswer:'
+    prompt+=f'''Question: {summaryquery}
+    
+    Instructions: 1. Please include in-text numbered citations of the form [id] for any relevant sources cited in the answer. 2. Don't add references at the end of the answer. 3. Structure the answer into multiple paragraphs where necessary. 4. Don't use additional numbers for citations apart from the provided text ids.
+    
+    Answer:'''
 
     finalsummary = gpt3_completion(prompt, engine=summarymodel)
 
-    s = QuestionSummary(questionidx=questionidx, idx=topicidx, query=query, summary=finalsummary, urls=json.dumps(relevanturls))
+    s = QuestionSummary(questionidx=questionidx, idx=topicidx, query=query, summary=finalsummary, urls=json.dumps(relevanturls[:3]))
+    s.save()
+
+    # driver.quit()
+
+    return finalsummary, s, False
+
+def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summarytype=0, summarymodel='gpt-3.5-turbo'):
+
+    # chrome_options = Options() # faster to start the driver just once, not once per call to contentfinder...
+    # chrome_options.add_argument('--headless')
+    # driver = webdriver.Chrome('chromedriver', options=chrome_options)
+    
+    previoussummary = QuestionSummary.objects.filter(questionidx=questionidx, idx=topicidx, query=query)
+    if len(previoussummary) == 1:
+        return previoussummary[0].summary, previoussummary[0], True
+    
+    relevantquestions = Relevantquestions.objects.get(query=query, idx=topicidx)
+    if len(relevantquestions.questions) == 0:
+        raise Exception("No relevant questions found for this topic!")
+    
+    question = json.loads(relevantquestions.questions)[questionidx]
+
+    summaryquery = f'{question}'
+
+    searchurls = [x[0] for x in bingapi(summaryquery)]
+
+    summaries = []
+    relevanturls = []
+    # for url in searchurls[0:5]:
+    #     pagedata, url = getpagetext(url)
+    #     if len(pagedata)>100: # random number, but if the text is too short, it's probably not useful
+    #         summaries.append(summarizewithextractive(pagedata, 3, 4))
+    #         relevanturls.append(url)
+    with Pool(5) as p:
+        tuples = p.map(pooled_scrape, searchurls[:5])
+
+    summaries = list(itertools.chain.from_iterable(map(lambda x: x[0], tuples)))
+    relevanturls = list(itertools.chain.from_iterable(map(lambda x: x[1], tuples)))
+
+    prompt = ""
+
+    for i in range(len(summaries[:5])):
+        prompt+=f'text {i+1}: {summaries[i]}\n\n'
+
+    prompt+=f'''Question: {summaryquery}
+
+    Answer:'''
+
+#     messages = [{
+#         "role": "user",
+#         "content": "You are an expert summarizer."
+#     },
+#     {
+#         "role": "user",
+#         "content": "Please summarize the following texts, which are in the format id: text_content, into a detailed and coherent answer to the question. 1-2 paragraphs are ideal."
+#     },
+#     {
+#         "role": "user",
+#         "content": """Instructions: 
+# 1. Please include in-text numbered citations of the form [id] for any relevant sources cited in the answer. 
+# 2. Don't add references at the end of the answer. 
+# 3. Structure the answer into multiple paragraphs where necessary. 
+# 4. For numbering a list, use the form 'li1', 'li2', and so on only."""
+#     },
+#     {
+#         "role": "user",
+#         "content": prompt
+#     }]
+
+    messages = definemessages(prompt, summarytype=summarytype)
+
+    temperature = 0.2
+    max_length = 500
+    top_p = 1.0
+    frequency_penalty = 0.0
+    presence_penalty = 0.0
+
+    # making API request and error checking
+    try:
+        response = openai.ChatCompletion.create(
+            model=summarymodel, 
+            messages=messages, 
+            temperature=temperature, 
+            max_tokens=max_length, 
+            top_p=top_p, 
+            frequency_penalty=frequency_penalty, 
+            presence_penalty=presence_penalty)
+    except openai.error.RateLimitError as e:
+        print("OpenAI API rate limit error! See below:")
+        print(e)
+        return None, None, None
+    except Exception as e:
+        print("Unknown OpenAI API error! See below:")
+        print(e)
+        return None, None, None
+
+    # response = {}
+    # response['choices'] = [{'text': "\n\nCancer diagnosis; Cancer staging; Cancer treatment options; Surgery; Radiation therapy; Chemotherapy; Targeted therapy; Immunotherapy; Hormone therapy; Clinical trials; Palliative care; Nutrition and exercise; Coping with cancer."}]
+    # response['usage'] = {'total_tokens':69}
+    
+    finalsummary = response['choices'][0]['message']['content']
+    # print(finalsummary)
+
+    # finalsummary = gpt3_completion(prompt, engine=summarymodel)
+
+    s = QuestionSummary(questionidx=questionidx, idx=topicidx, query=query, summary=finalsummary, urls=json.dumps(relevanturls[:3]))
     s.save()
 
     # driver.quit()
