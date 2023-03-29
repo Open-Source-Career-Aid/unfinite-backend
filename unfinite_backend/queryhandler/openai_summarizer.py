@@ -499,14 +499,16 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
     # chrome_options.add_argument('--headless')
     # driver = webdriver.Chrome('chromedriver', options=chrome_options)
     
-    previoussummary = QuestionSummary.objects.filter(questionidx=questionidx, idx=topicidx, query=query)
+    previoussummary = QuestionSummary.objects.filter(questionidx=questionidx, idx=topicidx, query=query, answertype=summarytype)
     if len(previoussummary) == 1:
+        print("found previous summary")
         return previoussummary[0].summary, previoussummary[0], True
     
     relevantquestions = Relevantquestions.objects.get(query=query, idx=topicidx)
     if len(relevantquestions.questions) == 0:
         raise Exception("No relevant questions found for this topic!")
     
+    print("found relevant questions")
     question = json.loads(relevantquestions.questions)[questionidx]
 
     summaryquery = f'{question}'
@@ -592,7 +594,7 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
 
     # finalsummary = gpt3_completion(prompt, engine=summarymodel)
 
-    s = QuestionSummary(questionidx=questionidx, idx=topicidx, query=query, summary=finalsummary, urls=json.dumps(relevanturls[:3]))
+    s = QuestionSummary(questionidx=questionidx, idx=topicidx, query=query, summary=finalsummary, urls=json.dumps(relevanturls[:3]), answertype=summarytype)
     s.save()
 
     # driver.quit()
