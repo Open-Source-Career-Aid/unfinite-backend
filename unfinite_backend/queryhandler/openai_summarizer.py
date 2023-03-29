@@ -512,7 +512,7 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
     summaryquery = f'{question}'
 
     searchurls = [x[0] for x in bingapi(summaryquery)]
-
+    print("got urls", flush=True)
     summaries = []
     relevanturls = []
     # for url in searchurls[0:5]:
@@ -520,12 +520,15 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
     #     if len(pagedata)>100: # random number, but if the text is too short, it's probably not useful
     #         summaries.append(summarizewithextractive(pagedata, 3, 4))
     #         relevanturls.append(url)
-    with Pool(5) as p:
-        tuples = p.map(pooled_scrape, searchurls[:5])
-
+    #with Pool(5) as p:
+    #    tuples = p.map(pooled_scrape, searchurls[:5])
+    tuples = []
+    for i in range(5): # something slow here
+         tuples.append(pooled_scrape(searchurls[i]))
+    print("starting to join results from pool", flush=True)
     summaries = list(itertools.chain.from_iterable(map(lambda x: x[0], tuples)))
     relevanturls = list(itertools.chain.from_iterable(map(lambda x: x[1], tuples)))
-
+    print("got all data from pool", flush=True)
     prompt = ""
 
     for i in range(len(summaries[:5])):
@@ -555,7 +558,7 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
 #         "role": "user",
 #         "content": prompt
 #     }]
-
+    print("defining messages", flush=True)
     messages = definemessages(prompt, summarytype=summarytype)
 
     temperature = 0.2
@@ -563,7 +566,7 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
     top_p = 1.0
     frequency_penalty = 0.0
     presence_penalty = 0.0
-
+    print("trying openai", flush=True)
     # making API request and error checking
     try:
         response = openai.ChatCompletion.create(
@@ -586,7 +589,7 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
     # response = {}
     # response['choices'] = [{'text': "\n\nCancer diagnosis; Cancer staging; Cancer treatment options; Surgery; Radiation therapy; Chemotherapy; Targeted therapy; Immunotherapy; Hormone therapy; Clinical trials; Palliative care; Nutrition and exercise; Coping with cancer."}]
     # response['usage'] = {'total_tokens':69}
-    
+    print("success!", flush=True)
     finalsummary = response['choices'][0]['message']['content']
     # print(finalsummary)
 
@@ -596,5 +599,5 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
     s.save()
 
     # driver.quit()
-
+    print("done!", flush=True)
     return finalsummary, s, False
