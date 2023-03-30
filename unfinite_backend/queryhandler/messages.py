@@ -40,14 +40,15 @@ def definemessages(prompt, summarytype):
     },
     {
         "role": "user",
-        "content": "Please summarize the following texts, which are in the format id: text_content, into a comprehensive answer to the question."
+        "content": """Please summarize the following texts, which are in the format id: "text_content", into a comprehensive answer to the question."""
     },
     {
         "role": "user",
         "content": """Instructions: 
 1. Please include in-text numbered citations of the form [id] for any relevant sources cited in the answer. 
 2. Don't add references at the end of the answer. 
-3. Structure the answer into multiple paragraphs where necessary."""
+3. Structure the answer into multiple paragraphs where necessary.
+4. Don't cite anything else than the text ids provided."""
     },
     {
         "role": "user",
@@ -59,14 +60,15 @@ def definemessages(prompt, summarytype):
     },
     {
         "role": "user",
-        "content": "Please summarize the following texts, which are in the format id: text_content, into a comprehensive answer to the question."
+        "content": """Please summarize the following texts, which are in the format id: "text_content", into a comprehensive answer to the question."""
     },
     {
         "role": "user",
         "content": """Instructions: 
 1. Please include in-text numbered citations of the form [id] for any relevant sources cited in the answer. 
 2. Don't add references at the end of the answer. 
-3. Keep the answer concise and to the point. Limit the answer to 1 paragraph only."""
+3. Keep the answer concise and to the point. Limit the answer to 1 paragraph only.
+4. Don't cite anything else than the text ids provided."""
     },
     {
         "role": "user",
@@ -78,14 +80,15 @@ def definemessages(prompt, summarytype):
     },
     {
         "role": "user",
-        "content": "Please summarize the following texts, which are in the format id: text_content, into a comprehensive answer to the question."
+        "content": """Please summarize the following texts, which are in the format id: "text_content", into a comprehensive answer to the question."""
     },
     {
         "role": "user",
         "content": """Instructions: 
 1. Please include in-text numbered citations of the form [id] for any relevant sources cited in the answer. 
 2. Don't add references at the end of the answer. 
-3. Provide a detailed answer. Include as many paragraphs as necessary. Try to explain the concepts in detail."""
+3. Provide a detailed answer. Include as many paragraphs as necessary. Try to explain the concepts in detail.
+4. Don't cite anything else than the text ids provided."""
     },
     {
         "role": "user",
@@ -97,14 +100,15 @@ def definemessages(prompt, summarytype):
     },
     {
         "role": "user",
-        "content": "Please summarize the following texts, which are in the format id: text_content, into a comprehensive answer to the question."
+        "content": """Please summarize the following texts, which are in the format id: [START]text_content[END], into a comprehensive answer to the question."""
     },
     {
         "role": "user",
         "content": """Instructions: 
 1. Please include in-text numbered citations of the form [id] for any relevant sources cited in the answer. 
-2. Don't add references at the end of the answer. 
-3. Simplify the answer. Use simple language and avoid technical jargon."""
+2. Don't add references at the end of the response. 
+3. Simplify the answer. Use simple language and avoid technical jargon.
+4. Don't cite anything else than the text ids provided."""
     },
     {
         "role": "user",
