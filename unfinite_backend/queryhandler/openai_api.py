@@ -22,7 +22,7 @@ def query_generation_model(model, query_topic, user_id):
     previous_queries = Query.objects.filter(query_text=query_topic)
     if len(previous_queries) == 1:
         #print('existing query found')
-        response_topics = parse(previous_queries[0].skeleton)
+        response_topics = json.loads(previous_queries[0].skeleton)
         # increment the found Query's num_searched field.
         previous_queries[0].searched()
         return response_topics, previous_queries[0], False
@@ -54,10 +54,10 @@ def query_generation_model(model, query_topic, user_id):
     # response['choices'] = [{'text': "\n\nCancer diagnosis; Cancer staging; Cancer treatment options; Surgery; Radiation therapy; Chemotherapy; Targeted therapy; Immunotherapy; Hormone therapy; Clinical trials; Palliative care; Nutrition and exercise; Coping with cancer."}]
     # response['usage'] = {'total_tokens':69}
     
-    response_topics = json.dumps(parse(response['choices'][0]['text']))
+    response_topics = parse(response['choices'][0]['text'])
 
     # new Query in database!
-    q = Query(user_id=user_id, query_text=query_topic, num_tokens=response['usage']['total_tokens'], skeleton=response_topics)
+    q = Query(user_id=user_id, query_text=query_topic, num_tokens=response['usage']['total_tokens'], skeleton=json.dumps(response_topics))
     q.save() # always do this!
 
     return response_topics, q, True
