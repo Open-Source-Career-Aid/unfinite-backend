@@ -1,6 +1,7 @@
 import requests, html2text, datetime
 from bs4 import BeautifulSoup
 from readability import Document
+from fake_useragent import UserAgent
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 # from readability import Document
@@ -497,7 +498,13 @@ def summary_generation_model(questionidx, topicidx, query, summarymodel='text-da
 
 
 def get_url_metadata(url):
-    response = requests.get(url)
+    ua = UserAgent()
+    headers = {
+        "User-Agent": ua.random,
+        "Accept-Language": "en-US,en;q=0.9",
+        "Content-Type": "application/json",
+    }
+    response = requests.get(url, headers=headers)
     if response.status_code == 200:
         soup = BeautifulSoup(response.text, 'html.parser')
         title = soup.title.string.strip() if soup.title else ""
@@ -506,9 +513,9 @@ def get_url_metadata(url):
         # print(desc.content if desc else url)
         doc = Document(response.text)
         # article = doc.summary(html_partial=True,).strip()[:min(len(doc.summary(html_partial=False)), 180)]
-        description = desc.get("content", "") if desc else para.text
-        # print(description.strip(), "desc")
-        summary = description if description else ""  # no description find first paragraph to use
+        description = desc.get("content", "") if desc else para.text[: min(len(para.text), 200)]
+        print(description.strip(), "desc")
+        summary = description.strip() if description else ""  # no description find first paragraph to use
         print(summary, "summary", url)
         content = soup.find_all('p')
         content_length = sum(len(p.get_text()) for p in content)
