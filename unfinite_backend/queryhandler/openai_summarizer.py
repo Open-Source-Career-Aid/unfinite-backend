@@ -498,39 +498,43 @@ def summary_generation_model(questionidx, topicidx, query, summarymodel='text-da
 
 
 def get_url_metadata(url):
-    ua = UserAgent()
-    headers = {
-        "User-Agent": ua.random,
-        "Accept-Language": "en-US,en;q=0.9",
-        "Content-Type": "application/json",
-    }
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        soup = BeautifulSoup(response.text, 'html.parser')
-        title = soup.title.string.strip() if soup.title else ""
-        source = url.split("//")[-1].split("/")[0].split(".")[1].capitalize()
-        desc, para = soup.find('meta', attrs={'name': 'description'}), soup.find('p')
-        # print(desc.content if desc else url)
-        doc = Document(response.text)
-        # article = doc.summary(html_partial=True,).strip()[:min(len(doc.summary(html_partial=False)), 180)]
-        description = desc.get("content", "") if desc else para.text[: min(len(para.text), 200)]
-        print(description.strip(), "desc")
-        summary = description.strip() if description else ""  # no description find first paragraph to use
-        print(summary, "summary", url)
-        content = soup.find_all('p')
-        content_length = sum(len(p.get_text()) for p in content)
-        content_read_time = int(content_length / 1000) + 1
-        date = datetime.datetime.now().strftime("%Y-%m-%d")
-        return {
-            "title": title,
-            "source": source,
-            "summary": summary,
-            "content_length": content_length,
-            "content_read_time": content_read_time,
-            "date": date,
-            "status": response.status_code
+    try:
+        ua = UserAgent()
+        headers = {
+            "User-Agent": ua.random,
+            "Accept-Language": "en-US,en;q=0.9",
+            "Content-Type": "application/json",
         }
-    return {"url": url, "status": response.status_code}
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            title = soup.title.string.strip() if soup.title else ""
+            source = url.split("//")[-1].split("/")[0].split(".")[1].capitalize()
+            desc, para = soup.find('meta', attrs={'name': 'description'}), soup.find('p')
+            # print(desc.content if desc else url)
+            doc = Document(response.text)
+            # article = doc.summary(html_partial=True,).strip()[:min(len(doc.summary(html_partial=False)), 180)]
+            description = desc.get("content", "") if desc else para.text[: min(len(para.text), 200)]
+            print(description.strip(), "desc")
+            summary = description.strip() if description else ""  # no description find first paragraph to use
+            print(summary, "summary", url)
+            content = soup.find_all('p')
+            content_length = sum(len(p.get_text()) for p in content)
+            content_read_time = int(content_length / 1000) + 1
+            date = datetime.datetime.now().strftime("%Y-%m-%d")
+            return {
+                "title": title,
+                "source": source,
+                "summary": summary,
+                "content_length": content_length,
+                "content_read_time": content_read_time,
+                "date": date,
+                "status": response.status_code
+            }
+        return {"url": url, "status": response.status_code}
+    except (TypeError, KeyError, SyntaxError, IndexError, ConnectionAbortedError, Exception) as err:
+        print("a exception occurred  %s" % err)
+        return {"url": url, "status": err}
 
 
 def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summarytype=0, summarymodel='gpt-3.5-turbo'):
