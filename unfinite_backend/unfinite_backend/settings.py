@@ -41,7 +41,7 @@ OPENAI_API_KEY = str(os.getenv('OPENAI_API_KEY'))
 
 # CORS
 CORS_ALLOW_CREDENTIALS = True
-CORS_ORIGIN_WHITELIST = ['http://localhost:3000', '3.135.226.130'] # For development of the front-end. Will be https://app.unfinite.co
+#CORS_ORIGIN_WHITELIST = ['http://localhost:3000', '3.135.226.130'] # For development of the front-end. Will be https://app.unfinite.co
 
 # NOTE: hopefully default cache is fine for django-ratelimit?
 
@@ -57,7 +57,7 @@ SESSION_COOKIE_HTTPONLY = True
 
 #CSRF_HEADER_NAME = "HTTP_X_CSRFTOKEN"
 
-CSRF_TRUSTED_ORIGINS = ['http://localhost:3000', '3.135.226.130'] # For dev. prod: https://app.unfinite.co
+CSRF_TRUSTED_ORIGINS = ['https://app.unfinite.co'] # For dev. prod: https://app.unfinite.co
 
 # Enable for production, forces HTTPS for cookies:
 # CSRF_COOKIE_SECURE = True

@@ -522,11 +522,15 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
     #     if len(pagedata)>100: # random number, but if the text is too short, it's probably not useful
     #         summaries.append(summarizewithextractive(pagedata, 3, 4))
     #         relevanturls.append(url)
-    with Pool(5) as p:
-        tuples = p.map(pooled_scrape, searchurls[:5])
+    for i in range(min(5, len(searchurls))):
+        r = pooled_scrape(searchurls[i])
+        summaries.append(r[0])
+        relevanturls.append(r[1])
+    #with Pool(5) as p:
+    #    tuples = p.map(pooled_scrape, searchurls[:5])
 
-    summaries = list(itertools.chain.from_iterable(map(lambda x: x[0], tuples)))
-    relevanturls = list(itertools.chain.from_iterable(map(lambda x: x[1], tuples)))
+    #summaries = list(itertools.chain.from_iterable(map(lambda x: x[0], tuples)))
+    #relevanturls = list(itertools.chain.from_iterable(map(lambda x: x[1], tuples)))
 
     prompt = ""
 
