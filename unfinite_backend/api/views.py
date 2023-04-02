@@ -316,7 +316,7 @@ def get_completion(request):
     else:
         c = cs[0]
     
-    return JsonResponse(data={'completion':json.dumps(c.completion), 'track': c.track}, status=200)
+    return JsonResponse(data={'completion': json.dumps(c.completion), 'track': c.track}, status=200)
 
 @require_POST
 @requires_authentication
