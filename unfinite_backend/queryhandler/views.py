@@ -1,5 +1,3 @@
-import requests, datetime
-from bs4 import BeautifulSoup
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -166,36 +164,8 @@ def summary(request):
 
     # generate summary
     # summary, s, was_new = summary_generation_model(ques_num, topic_num, q)
-    summary, s, was_new = summary_generation_model_gpt3_5_turbo(ques_num, topic_num, q, summarytype=int(answer_type))
+    summary, s, was_new, metadata = summary_generation_model_gpt3_5_turbo(ques_num, topic_num, q, summarytype=int(answer_type))
+    # print(metadata)
 
-    def get_url_metadata(url):
-        response = requests.get(url)
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.text, 'html.parser')
-            title = soup.title.string.strip() if soup.title else ""
-            source = url.split("//")[-1].split("/")[0].split(".")[1].capitalize()
-            summary = soup.find('meta', attrs={'name': 'description'})['content'].strip() if soup.find('meta', attrs={
-                'name': 'description'}) else ""
-            content = soup.find_all('p')
-            content_length = sum(len(p.get_text()) for p in content)
-            content_read_time = int(content_length / 1000) + 1
-            date = datetime.datetime.now().strftime("%Y-%m-%d")
-            return {
-                "title": title,
-                "source": source,
-                "summary": summary,
-                "content_length": content_length,
-                "content_read_time": content_read_time,
-                "date": date,
-                "status": response.status_code
-            }
-        return  {"url": url, "status": response.status_code}
-    url_list = eval(s.urls) # evals string to list
-    is_list = type(url_list)
-    if is_list == list:
-        metadata = {k: get_url_metadata(k) for k in url_list}
-    else:
-        metadata = {"url": url_list,
-                    "status": "TypeError expected object is list for metadata but %s was found" % is_list}
 
-    return JsonResponse(data={'summary': summary, 'urls':s.urls, 'urlidx':s.urlidx, "metadata": metadata, 'id': s.id, 'was_new':was_new}, status=200)
+    return JsonResponse(data={'summary': summary, 'urls':s.urls, 'urlidx':s.urlidx, 'metadata': metadata, 'id': s.id, 'was_new':was_new}, status=200)
