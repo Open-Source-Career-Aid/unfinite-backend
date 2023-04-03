@@ -1,6 +1,6 @@
 import requests, html2text, datetime
 from bs4 import BeautifulSoup
-from readability import Document
+# from readability import Document
 from fake_useragent import UserAgent
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -554,9 +554,6 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
 
         return meta
 
-
-
-
     previoussummary = QuestionSummary.objects.filter(questionidx=questionidx, idx=topicidx, query=query, answertype=summarytype).first()
 
     if previoussummary:
@@ -571,6 +568,7 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
     
     print("found relevant questions")
     question = json.loads(relevantquestions.questions)[questionidx]
+    print(question)
 
     summaryquery = f'{question}'
 
@@ -586,12 +584,13 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
     with Pool(5) as p:
         tuples = p.map(pooled_scrape, searchurls[:5])
 
+    print('got summaries')
     summaries = list(itertools.chain.from_iterable(map(lambda x: x[0], tuples)))
     relevanturls = list(itertools.chain.from_iterable(map(lambda x: x[1], tuples)))
 
     prompt = ""
 
-    for i in range(len(summaries[:5])):
+    for i in range(len(summaries)):
         prompt+=f'text {i+1}: [START]{summaries[i]}[END]\n\n'
 
     prompt+=f'''Question: {summaryquery}
@@ -628,6 +627,7 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
     presence_penalty = 0.0
 
     # making API request and error checking
+    print("making API request")
     try:
         response = openai.ChatCompletion.create(
             model=summarymodel, 
@@ -655,12 +655,12 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
 
     # finalsummary = gpt3_completion(prompt, engine=summarymodel)
 
-    s = QuestionSummary(questionidx=questionidx, idx=topicidx, query=query, summary=finalsummary, urls=json.dumps(relevanturls[:3]), answertype=summarytype)
+    s = QuestionSummary(questionidx=questionidx, idx=topicidx, query=query, summary=finalsummary, urls=json.dumps(relevanturls), answertype=summarytype)
     # driver.quit()
     s.save()
-    metadata = metadata_getter(s)
+    # metadata = metadata_getter(s)
 
 
 
-    return finalsummary, s, False, metadata
+    return finalsummary, s, False
 
