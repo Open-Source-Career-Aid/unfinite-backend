@@ -193,6 +193,7 @@ def recursivesummariser(listofsummaries, howmanychunks, top_n=3):
     if len(chunk)!=0:
         moresummaries.append(textrank(chunk, howmanychunks))
     if sum([len(x.split(' ')) for x in moresummaries])>500:
+        # print('test')
         return recursivesummariser(moresummaries, howmanychunks, top_n)
     return moresummaries
 
@@ -212,50 +213,56 @@ def summarizewithextractive(text, top_n, howmanychunks):
 
 def contentfinder_noJS(url):
 
+    timeout = 1
+
     #print('finding content for: ', url)
 
     # Send a GET request to the URL and parse the HTML content with BeautifulSoup
     headers = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:55.0) Gecko/20100101 Firefox/55.0',
     }
-    response = requests.get(url, headers=headers)
-    soup = BeautifulSoup(response.text, "html.parser")
 
-    # Check if the page uses JavaScript
     try:
-        if "javascript" in soup.find("html").get("class", []):
+        response = requests.get(url, headers=headers, timeout=timeout)
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        # Check if the page uses JavaScript
+        try:
+            if "javascript" in soup.find("html").get("class", []):
+                pass
+            else:
+                html = requests.get(url).text
+        except Exception:
             pass
-        else:
-            html = requests.get(url).text
-    except Exception:
-        pass
 
-    article = None
-    t = soup.find('title')
-    title = t.string if t is not None else None
-    try:
-        lang = detect(soup.body.get_text())
-    except Exception:
-        lang = None
+        article = None
+        t = soup.find('title')
+        title = t.string if t is not None else None
+        try:
+            lang = detect(soup.body.get_text())
+        except Exception:
+            lang = None
 
-    # Look for the <article>, <div>, or <section> tags that contain the main article content
-    article = soup.find("article") or soup.find("div", class_="article") or soup.find("section", class_="article")
+        # Look for the <article>, <div>, or <section> tags that contain the main article content
+        article = soup.find("article") or soup.find("div", class_="article") or soup.find("section", class_="article")
 
-    # If the <article>, <div>, or <section> tags are not found, look for elements with specific CSS classes
-    if not article:
-        article = soup.find("div", class_="entry-content") or soup.find("div", class_="main-content")
+        # If the <article>, <div>, or <section> tags are not found, look for elements with specific CSS classes
+        if not article:
+            article = soup.find("div", class_="entry-content") or soup.find("div", class_="main-content")
 
-    # If the <article>, <div>, or <section> tags are not found, look for the <main> tag
-    if not article:
-        article = soup.find("main")
+        # If the <article>, <div>, or <section> tags are not found, look for the <main> tag
+        if not article:
+            article = soup.find("main")
 
-    # If the <article>, <div>, <section>, or <main> tags are not found, use a content extraction library
-    # if not article:
-    #     doc = Document(response.text)
-    #     article = BeautifulSoup(doc.summary(html_partial=True), "html.parser")
+        # If the <article>, <div>, <section>, or <main> tags are not found, use a content extraction library
+        # if not article:
+        #     doc = Document(response.text)
+        #     article = BeautifulSoup(doc.summary(html_partial=True), "html.parser")
 
-    # Returns the parsed article content
-    return article, title, lang
+        # Returns the parsed article content
+        return article, title, lang
+    except requests.exceptions.Timeout:
+        return None, None, None
 
 def getpagetext(url):
     text = ''
@@ -274,6 +281,8 @@ def getpagetext(url):
     return (text, url)
 
 def pooled_scrape(url):
+
+    print('scraping: ', url)
 
     pagedata, url = getpagetext(url)
     summaries = []
