@@ -1,5 +1,7 @@
-import requests, html2text
+import requests, html2text, datetime
 from bs4 import BeautifulSoup
+# from readability import Document
+from fake_useragent import UserAgent
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 # from readability import Document
@@ -493,16 +495,72 @@ def summary_generation_model(questionidx, topicidx, query, summarymodel='text-da
 
     return finalsummary, s, False
 
+
+
+def get_url_metadata(url):
+    try:
+        ua = UserAgent()
+        headers = {
+            "User-Agent": ua.random,
+            "Accept-Language": "en-US,en;q=0.9",
+            "Content-Type": "application/json",
+        }
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            title = soup.title.string.strip() if soup.title else ""
+            source = url.split("//")[-1].split("/")[0].split(".")[1].capitalize()
+            desc, para = soup.find('meta', attrs={'name': 'description'}), soup.find('p')
+            # print(desc.content if desc else url)
+            doc = Document(response.text)
+            # article = doc.summary(html_partial=True,).strip()[:min(len(doc.summary(html_partial=False)), 180)]
+            description = desc.get("content", "") if desc else para.text[: min(len(para.text), 200)]
+            print(description.strip(), "desc")
+            summary = description.strip() if description else ""  # no description find first paragraph to use
+            print(summary, "summary", url)
+            content = soup.find_all('p')
+            content_length = sum(len(p.get_text()) for p in content)
+            content_read_time = int(content_length / 1000) + 1
+            date = datetime.datetime.now().strftime("%Y-%m-%d")
+            return {
+                "title": title,
+                "source": source,
+                "summary": summary,
+                "content_length": content_length,
+                "content_read_time": content_read_time,
+                "date": date,
+                "status": response.status_code
+            }
+        return {"url": url, "status": response.status_code}
+    except (TypeError, KeyError, SyntaxError, IndexError, ConnectionAbortedError, Exception) as err:
+        print("a exception occurred  %s" % err)
+        return {"url": url, "status": err}
+
+
 def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summarytype=0, summarymodel='gpt-3.5-turbo'):
 
     # chrome_options = Options() # faster to start the driver just once, not once per call to contentfinder...
     # chrome_options.add_argument('--headless')
     # driver = webdriver.Chrome('chromedriver', options=chrome_options)
-    
-    previoussummary = QuestionSummary.objects.filter(questionidx=questionidx, idx=topicidx, query=query, answertype=summarytype)
-    if len(previoussummary) == 1:
+
+    def metadata_getter(obj):
+        url_list = eval(obj.urls)  # evals string to list
+        is_list = type(url_list)
+        if is_list == list:
+            meta = {k: get_url_metadata(k) for k in url_list}
+        else:
+            meta = {"url": url_list,
+                        "status": "TypeError expected object is list for metadata but %s was found" % is_list}
+
+        return meta
+
+    previoussummary = QuestionSummary.objects.filter(questionidx=questionidx, idx=topicidx, query=query, answertype=summarytype).first()
+
+    if previoussummary:
         print("found previous summary")
-        return previoussummary[0].summary, previoussummary[0], True
+        metadata = metadata_getter(previoussummary)
+        print(metadata)
+        return previoussummary.summary, previoussummary, True, metadata
     
     relevantquestions = Relevantquestions.objects.get(query=query, idx=topicidx)
     if len(relevantquestions.questions) == 0:
@@ -510,6 +568,7 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
     
     print("found relevant questions")
     question = json.loads(relevantquestions.questions)[questionidx]
+    print(question)
 
     summaryquery = f'{question}'
 
@@ -525,12 +584,13 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
     with Pool(5) as p:
         tuples = p.map(pooled_scrape, searchurls[:5])
 
+    print('got summaries')
     summaries = list(itertools.chain.from_iterable(map(lambda x: x[0], tuples)))
     relevanturls = list(itertools.chain.from_iterable(map(lambda x: x[1], tuples)))
 
     prompt = ""
 
-    for i in range(len(summaries[:5])):
+    for i in range(len(summaries)):
         prompt+=f'text {i+1}: [START]{summaries[i]}[END]\n\n'
 
     prompt+=f'''Question: {summaryquery}
@@ -567,6 +627,7 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
     presence_penalty = 0.0
 
     # making API request and error checking
+    print("making API request")
     try:
         response = openai.ChatCompletion.create(
             model=summarymodel, 
@@ -594,9 +655,12 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
 
     # finalsummary = gpt3_completion(prompt, engine=summarymodel)
 
-    s = QuestionSummary(questionidx=questionidx, idx=topicidx, query=query, summary=finalsummary, urls=json.dumps(relevanturls[:3]), answertype=summarytype)
-    s.save()
-
+    s = QuestionSummary(questionidx=questionidx, idx=topicidx, query=query, summary=finalsummary, urls=json.dumps(relevanturls), answertype=summarytype)
     # driver.quit()
+    s.save()
+    # metadata = metadata_getter(s)
+
+
 
     return finalsummary, s, False
+
