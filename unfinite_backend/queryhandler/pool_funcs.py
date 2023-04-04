@@ -1,5 +1,6 @@
 import requests, html2text
 from bs4 import BeautifulSoup
+from fake_useragent import UserAgent
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 # from readability import Document
@@ -218,8 +219,12 @@ def contentfinder_noJS(url):
     #print('finding content for: ', url)
 
     # Send a GET request to the URL and parse the HTML content with BeautifulSoup
+    # Send a GET request to the URL and parse the HTML content with BeautifulSoup
+    ua = UserAgent()
     headers = {
-    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:55.0) Gecko/20100101 Firefox/55.0',
+        "User-Agent": ua.random,
+        "Accept-Language": "en-US,en;q=0.9",
+        "Content-Type": "application/json",
     }
 
     try:
@@ -253,6 +258,15 @@ def contentfinder_noJS(url):
         # If the <article>, <div>, or <section> tags are not found, look for the <main> tag
         if not article:
             article = soup.find("main")
+            # meta work around
+
+        description, para = soup.find('meta', attrs={'name': 'description'}), soup.find('p')
+        description = description.get("content", "") if description else para.text[: min(len(para.text), 200)] if para else ""
+        summary = description.strip() if description else ""
+        source = url.split("//")[-1].split("/")[0].split(".")[1].capitalize()
+        content = soup.find_all('p')
+        content_length = sum(len(p.get_text()) for p in content)
+        content_read_time = int(content_length / 1000) + 1
 
         # If the <article>, <div>, <section>, or <main> tags are not found, use a content extraction library
         # if not article:
@@ -260,16 +274,26 @@ def contentfinder_noJS(url):
         #     article = BeautifulSoup(doc.summary(html_partial=True), "html.parser")
 
         # Returns the parsed article content
-        return article, title, lang
+        _meta = {
+            "title": title,
+            "source": source,
+            "summary": summary,
+            "content_read_time": content_read_time,
+            "status": response.status_code,
+            "url": url
+        }
+        return article, title, lang, _meta
     except requests.exceptions.Timeout:
-        return None, None, None
+        return None, None, None, None
 
 def getpagetext(url):
     text = ''
     # Define a list of valid tag names
     valid_tags = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'li']
     nextentry = ''
-    article = contentfinder_noJS(url)[0]
+    content_finder = contentfinder_noJS(url)
+    article = content_finder[0]
+    content_meta = content_finder[3]
     if article is None: return '', url
     for element in article.find_all():
         # Check if the element is part of the readable article content and has a valid tag name
@@ -278,21 +302,20 @@ def getpagetext(url):
             text+=element.get_text(strip=True) + '\n'
             # print(element.name, ":", element.get_text(strip=True))
     #print('\n\n\n Got data from the urls! \n\n\n')
-    return (text, url)
+    return (text, url, content_meta)
+
 
 def pooled_scrape(url):
-
     print('scraping: ', url)
-
-    pagedata, url = getpagetext(url)
+    pagedata, url, url_meta = getpagetext(url)
     summaries = []
-    relevanturls = []
+    _metadata = []
 
     if len(pagedata)>100: # random number, but if the text is too short, it's probably not useful
         summaries.append(summarizewithextractive(pagedata, 3, 4))
-        relevanturls.append(url)
+        _metadata.append([str(url_meta['title']), url_meta['source'], str(url_meta['summary']), str(url_meta['content_read_time']), str(url_meta['url'])])
     
-    return (summaries, relevanturls)
+    return (summaries, _metadata)
 
 
 def f(x): 
