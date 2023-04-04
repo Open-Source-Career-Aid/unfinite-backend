@@ -512,14 +512,16 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
         return _meta
 
     previoussummary = QuestionSummary.objects.filter(questionidx=questionidx, idx=topicidx, query=query, answertype=summarytype).first()
-
+    previous_url = json.loads(previoussummary.urls)
     if previoussummary:
         print("found previous summary")
         metadata = json.loads(previoussummary.urls)
+        print(metadata, type(metadata))
         if type(metadata) == dict:
             print(metadata, "metadata")
             metadata = metadata.setdefault("metadata", [])
             metadata = {o["url"]: o for o in metadata}
+            previous_url_list = [o["url"] for o in previous_url]
         # old previous summary urls cols is a list of urls instead of a dict
         else:
             metadata = {"title": "unknown",
@@ -528,7 +530,8 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
                         "content_length": "0",
                         "content_read_time": "0",
                         "status": "0"}
-        return previoussummary.summary, previoussummary, True, metadata
+            previous_url_list = previoussummary.urls
+        return previoussummary.summary, previoussummary, True, metadata, previous_url_list
     
     relevantquestions = Relevantquestions.objects.get(query=query, idx=topicidx)
     if len(relevantquestions.questions) == 0:
@@ -556,7 +559,7 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
     summaries = list(itertools.chain.from_iterable(map(lambda x: x[0], tuples)))
     relevanturls = list(itertools.chain.from_iterable(map(lambda x: x[1], tuples)))
     url_metadata = metadata_getter(relevanturls) # get metadata for urls and add to the summary mappping
-
+    new_url_metadata = {o["url"]: o for o in url_metadata}
 
     # # removing summaries that are None or too short
     # summaries = []
@@ -613,7 +616,7 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
     s.save()
     # metadata = metadata_getter(s)
 
-    return finalsummary, s, False, url_metadata
+    return finalsummary, s, False, url_metadata, new_url_metadata
 
 
 def summary_stream_gpt_3_5_turbo(questionidx, topicidx, query, summarytype=0, summarymodel='gpt-3.5-turbo'):

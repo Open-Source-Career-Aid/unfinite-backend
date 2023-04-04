@@ -165,11 +165,11 @@ def summary(request):
 
     # generate summary
     # summary, s, was_new = summary_generation_model(ques_num, topic_num, q)
-    summary, s, was_new = summary_generation_model_gpt3_5_turbo(ques_num, topic_num, q, summarytype=int(answer_type))
+    summary, s, was_new, _metadata, url_list = summary_generation_model_gpt3_5_turbo(ques_num, topic_num, q, summarytype=int(answer_type))
     # print(metadata)
 
 
-    return JsonResponse(data={'summary': summary, 'urls':s.urls, 'urlidx':s.urlidx, 'id': s.id, 'was_new':was_new}, status=200)
+    return JsonResponse(data={'summary': summary, 'urls':url_list, 'urlidx':s.urlidx, 'id': s.id, 'was_new':was_new, "metadata": _metadata}, status=200)
 
 @csrf_exempt
 @require_internal
