@@ -16,6 +16,7 @@ from multiprocessing import Pool
 import itertools
 import openai, json
 from django.http import JsonResponse
+from django.http import StreamingHttpResponse
 from django.conf import settings
 from .models import *
 from .scrape import attach_links, google_SERP, serphouse, scrapingrobot, scrapeitserp, bingapi
@@ -28,6 +29,7 @@ from math import log10
 from .pool_funcs import f, pooled_scrape
 from django.apps import apps
 from .messages import definemessages
+from .openairesponses import *
 Query = apps.get_model('api', 'Query')
 Relevantquestions = apps.get_model('api', 'Relevantquestions')
 QuestionSummary = apps.get_model('api', 'QuestionSummary')
@@ -543,16 +545,16 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
     # chrome_options.add_argument('--headless')
     # driver = webdriver.Chrome('chromedriver', options=chrome_options)
 
-    def metadata_getter(obj):
-        url_list = eval(obj.urls)  # evals string to list
-        is_list = type(url_list)
-        if is_list == list:
-            meta = {k: get_url_metadata(k) for k in url_list}
-        else:
-            meta = {"url": url_list,
-                        "status": "TypeError expected object is list for metadata but %s was found" % is_list}
+    # def metadata_getter(obj):
+    #     url_list = eval(obj.urls)  # evals string to list
+    #     is_list = type(url_list)
+    #     if is_list == list:
+    #         meta = {k: get_url_metadata(k) for k in url_list}
+    #     else:
+    #         meta = {"url": url_list,
+    #                     "status": "TypeError expected object is list for metadata but %s was found" % is_list}
 
-        return meta
+    #     return meta
 
     previoussummary = QuestionSummary.objects.filter(questionidx=questionidx, idx=topicidx, query=query, answertype=summarytype).first()
 
@@ -588,6 +590,17 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
     summaries = list(itertools.chain.from_iterable(map(lambda x: x[0], tuples)))
     relevanturls = list(itertools.chain.from_iterable(map(lambda x: x[1], tuples)))
 
+
+    # # removing summaries that are None or too short
+    # summaries = []
+    # relevanturls = []
+    # for i in range(len(summaries)):
+    #     if summaries[i] is None:
+    #         continue
+    #     if len(summaries[i])>100:
+    #         summaries.append(summaries[i])
+    #         relevanturls.append(relevanturlstemp[i])
+
     prompt = ""
 
     for i in range(len(summaries)):
@@ -619,38 +632,11 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
 #     }]
 
     messages = definemessages(prompt, summarytype=summarytype)
-
-    temperature = 0.2
-    max_length = 500
-    top_p = 1.0
-    frequency_penalty = 0.0
-    presence_penalty = 0.0
-
-    # making API request and error checking
-    print("making API request")
-    try:
-        response = openai.ChatCompletion.create(
-            model=summarymodel, 
-            messages=messages, 
-            temperature=temperature, 
-            max_tokens=max_length, 
-            top_p=top_p, 
-            frequency_penalty=frequency_penalty, 
-            presence_penalty=presence_penalty)
-    except openai.error.RateLimitError as e:
-        print("OpenAI API rate limit error! See below:")
-        print(e)
-        return None, None, None
-    except Exception as e:
-        print("Unknown OpenAI API error! See below:")
-        print(e)
-        return None, None, None
-
     # response = {}
     # response['choices'] = [{'text': "\n\nCancer diagnosis; Cancer staging; Cancer treatment options; Surgery; Radiation therapy; Chemotherapy; Targeted therapy; Immunotherapy; Hormone therapy; Clinical trials; Palliative care; Nutrition and exercise; Coping with cancer."}]
     # response['usage'] = {'total_tokens':69}
     
-    finalsummary = response['choices'][0]['message']['content']
+    finalsummary = gpt3_3turbo_completion(messages, summarymodel=summarymodel)
     # print(finalsummary)
 
     # finalsummary = gpt3_completion(prompt, engine=summarymodel)
@@ -664,3 +650,61 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
 
     return finalsummary, s, False
 
+def summary_stream_gpt_3_5_turbo(questionidx, topicidx, query, summarytype=0, summarymodel='gpt-3.5-turbo'):
+
+    previoussummary = QuestionSummary.objects.filter(questionidx=questionidx, idx=topicidx, query=query, answertype=summarytype).first()
+
+    if previoussummary:
+        print("found previous summary")
+        # metadata = metadata_getter(previoussummary)
+        # print(metadata)
+        return previoussummary.summary, previoussummary, True
+    
+    relevantquestions = Relevantquestions.objects.get(query=query, idx=topicidx)
+    if len(relevantquestions.questions) == 0:
+        raise Exception("No relevant questions found for this topic!")
+    
+    print("found relevant questions")
+    question = json.loads(relevantquestions.questions)[questionidx]
+    print(question)
+
+    summaryquery = f'{question}'
+
+    searchurls = [x[0] for x in bingapi(summaryquery)]
+
+    # summaries = []
+    # relevanturls = []
+    with Pool(5) as p:
+        tuples = p.map(pooled_scrape, searchurls[:5])
+
+    print('got summaries')
+    summaries = list(itertools.chain.from_iterable(map(lambda x: x[0], tuples)))
+    relevanturls = list(itertools.chain.from_iterable(map(lambda x: x[1], tuples)))
+
+    prompt = ""
+
+    for i in range(len(summaries)):
+        prompt+=f'text {i+1}: [START]{summaries[i]}[END]\n\n'
+
+    prompt+=f'''Question: {summaryquery}
+
+    Answer:'''
+
+    messages = definemessages(prompt, summarytype=summarytype)
+
+    summarystream = gpt3_3turbo_completion_withstream(messages, summarymodel)
+
+    finalsummary = ''
+    
+    for chunk in summarystream:
+        try:
+            finalsummary += chunk.choices[0].delta.content
+        except:
+            try:
+                if chunk.choices[0].delta.finish_reason == 'stop':
+                    s = QuestionSummary(questionidx=questionidx, idx=topicidx, query=query, summary=finalsummary, urls=json.dumps(relevanturls), answertype=summarytype)
+                    s.save()
+                    continue
+            except:
+                continue
+        yield chunk
