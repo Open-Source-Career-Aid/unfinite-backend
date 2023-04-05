@@ -164,7 +164,7 @@ def summary(request):
 
     # generate summary
     # summary, s, was_new = summary_generation_model(ques_num, topic_num, q)
-    summary, s, was_new = summary_generation_model_gpt3_5_turbo(ques_num, topic_num, q, summarytype=int(answer_type))
+    summary, s, was_new, metadata = summary_generation_model_gpt3_5_turbo(ques_num, topic_num, q, summarytype=int(answer_type))
     # print(metadata)
 
 

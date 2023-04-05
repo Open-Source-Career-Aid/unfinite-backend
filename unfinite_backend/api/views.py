@@ -80,7 +80,7 @@ def register_view(request):
     confirm_password = data.get("cfm_password")
     first_name = data.get("first_name")
     last_name = data.get("last_name")
-    beta_key = data.get("beta_key")
+    #beta_key = data.get("beta_key") # no longer needed as of 4/4/23
 
     # check for None!
     if any(map(lambda x: x == None, [email, password, first_name, last_name])):
@@ -90,16 +90,17 @@ def register_view(request):
     if UnfiniteUser.objects.filter(email=email).exists():
         return JsonResponse({'detail': 'Email associated with an existing account.'}, status=400)
 
+    # DISREGARD FOLLOWING AS OF 4/4/23
     # find the beta key associated with the email
-    key_objs = BetaKey.objects.filter(user_email=email)
+    #key_objs = BetaKey.objects.filter(user_email=email)
 
     # it must exist... otherwise:
-    if len(key_objs) != 1:
-        return JsonResponse({'detail': 'Not an approved beta user.'}, status=400)
+    #if len(key_objs) != 1:
+    #    return JsonResponse({'detail': 'Not an approved beta user.'}, status=400)
 
     # make sure they provided a matching key!
-    if not key_objs[0].validate_key(beta_key):
-        return JsonResponse({'detail': 'Wrong registration key.'}, status=400)
+    #if not key_objs[0].validate_key(beta_key):
+    #    return JsonResponse({'detail': 'Wrong registration key.'}, status=400)
 
     user = UnfiniteUser.objects.create_user(email=email, password=password, first_name=first_name, last_name=last_name)
     user.is_beta = True
@@ -108,7 +109,8 @@ def register_view(request):
     # to delete the key after use, or not: that is the question...
     # do this after user account is created! Otherwise, if the registration failed,
     # they'd no longer have a key and wouldn't be able to try again!
-    key_objs[0].delete()
+    
+    #key_objs[0].delete() # also removed as of 4/4/23
 
     # log them in. for convenience. 
     login(request, user)

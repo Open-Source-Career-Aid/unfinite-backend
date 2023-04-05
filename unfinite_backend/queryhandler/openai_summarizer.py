@@ -662,5 +662,5 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
 
 
 
-    return finalsummary, s, False
+    return finalsummary, s, False, None
 
