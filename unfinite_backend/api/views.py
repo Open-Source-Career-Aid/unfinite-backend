@@ -1,6 +1,7 @@
 import json, requests
 from django.contrib.auth import authenticate, login, logout
 from django.http import JsonResponse
+from django.http import StreamingHttpResponse
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt, get_token
 from django.views.decorators.http import require_POST
 from .models import UnfiniteUser, BetaKey
@@ -243,6 +244,39 @@ def summary(request):
     # forward the response.
     # log_signal.send(sender=None, user_id=request.user.id, query_id=query_id, summary_id=r['id'], summary_was_new=r['was_new'], desc="Summary")
     return JsonResponse(data=r2, status=200)
+
+def summary_stream(request):
+    data = json.loads(request.body)
+    query_id = data.get('id')
+    topic_num = data.get('topic')
+    ques_num = data.get('question')
+
+    # all fields must be provided!
+    if query_id is None or topic_num is None or ques_num is None:
+        return JsonResponse(data={'detail': 'Missing query_id or topic or question'}, status=400)
+
+    if len(Query.objects.filter(id=query_id)) == 0:
+        return JsonResponse(data={'detail': 'No such query'}, status=400)
+
+    # ask queryhandler to get the summary. Provide Authorization key. Can just forward the request body JSON here.
+    response = requests.post(f'{settings.QUERYHANDLER_URL}summary_stream/', headers={'Authorization': settings.QUERYHANDLER_KEY}, json=data, stream=True)
+
+    # oops
+    # if response.status_code != 200:
+    #     return JsonResponse(data={'detail': 'Summary failed'}, status=500)
+
+    def stream_response(response):
+        for chunk in response.iter_content(chunk_size=1024):
+            if chunk:
+                yield chunk
+
+    # Forward the response as a streaming response
+    r = StreamingHttpResponse(stream_response(response), content_type='application/json')
+
+    # Set any headers that are required for the response
+    r['Content-Disposition'] = f'attachment; filename="{query_id}.json"'
+
+    return r
 
 @require_POST
 @requires_authentication
