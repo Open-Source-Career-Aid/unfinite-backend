@@ -1,6 +1,7 @@
 import json, requests
 from django.contrib.auth import authenticate, login, logout
 from django.http import JsonResponse
+from django.http import StreamingHttpResponse
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt, get_token
 from django.views.decorators.http import require_POST
 from .models import UnfiniteUser, BetaKey
@@ -80,7 +81,7 @@ def register_view(request):
     confirm_password = data.get("cfm_password")
     first_name = data.get("first_name")
     last_name = data.get("last_name")
-    beta_key = data.get("beta_key")
+    #beta_key = data.get("beta_key") # no longer needed as of 4/4/23
 
     # check for None!
     if any(map(lambda x: x == None, [email, password, first_name, last_name])):
@@ -90,16 +91,17 @@ def register_view(request):
     if UnfiniteUser.objects.filter(email=email).exists():
         return JsonResponse({'detail': 'Email associated with an existing account.'}, status=400)
 
+    # DISREGARD FOLLOWING AS OF 4/4/23
     # find the beta key associated with the email
-    key_objs = BetaKey.objects.filter(user_email=email)
+    #key_objs = BetaKey.objects.filter(user_email=email)
 
     # it must exist... otherwise:
-    if len(key_objs) != 1:
-        return JsonResponse({'detail': 'Not an approved beta user.'}, status=400)
+    #if len(key_objs) != 1:
+    #    return JsonResponse({'detail': 'Not an approved beta user.'}, status=400)
 
     # make sure they provided a matching key!
-    if not key_objs[0].validate_key(beta_key):
-        return JsonResponse({'detail': 'Wrong registration key.'}, status=400)
+    #if not key_objs[0].validate_key(beta_key):
+    #    return JsonResponse({'detail': 'Wrong registration key.'}, status=400)
 
     user = UnfiniteUser.objects.create_user(email=email, password=password, first_name=first_name, last_name=last_name)
     user.is_beta = True
@@ -108,7 +110,8 @@ def register_view(request):
     # to delete the key after use, or not: that is the question...
     # do this after user account is created! Otherwise, if the registration failed,
     # they'd no longer have a key and wouldn't be able to try again!
-    key_objs[0].delete()
+    
+    #key_objs[0].delete() # also removed as of 4/4/23
 
     # log them in. for convenience. 
     login(request, user)
@@ -241,6 +244,39 @@ def summary(request):
     # forward the response.
     # log_signal.send(sender=None, user_id=request.user.id, query_id=query_id, summary_id=r['id'], summary_was_new=r['was_new'], desc="Summary")
     return JsonResponse(data=r2, status=200)
+
+def summary_stream(request):
+    data = json.loads(request.body)
+    query_id = data.get('id')
+    topic_num = data.get('topic')
+    ques_num = data.get('question')
+
+    # all fields must be provided!
+    if query_id is None or topic_num is None or ques_num is None:
+        return JsonResponse(data={'detail': 'Missing query_id or topic or question'}, status=400)
+
+    if len(Query.objects.filter(id=query_id)) == 0:
+        return JsonResponse(data={'detail': 'No such query'}, status=400)
+
+    # ask queryhandler to get the summary. Provide Authorization key. Can just forward the request body JSON here.
+    response = requests.post(f'{settings.QUERYHANDLER_URL}summary_stream/', headers={'Authorization': settings.QUERYHANDLER_KEY}, json=data, stream=True)
+
+    # oops
+    # if response.status_code != 200:
+    #     return JsonResponse(data={'detail': 'Summary failed'}, status=500)
+
+    def stream_response(response):
+        for chunk in response.iter_content(chunk_size=1024):
+            if chunk:
+                yield chunk
+
+    # Forward the response as a streaming response
+    r = StreamingHttpResponse(stream_response(response), content_type='application/json')
+
+    # Set any headers that are required for the response
+    r['Content-Disposition'] = f'attachment; filename="{query_id}.json"'
+
+    return r
 
 @require_POST
 @requires_authentication
