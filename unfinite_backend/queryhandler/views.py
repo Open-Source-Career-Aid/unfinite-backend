@@ -210,4 +210,4 @@ def summary_stream(request):
 
 
     # return JsonResponse(data={'summary': summary, 'urls':s.urls, 'urlidx':s.urlidx, 'id': s.id, 'was_new':was_new}, status=200)
-    return StreamingHttpResponse(stream, content_type='text/event-stream')
+    return StreamingHttpResponse(stream, content_type='text/plain')

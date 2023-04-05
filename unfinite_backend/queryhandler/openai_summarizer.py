@@ -696,6 +696,7 @@ def summary_stream_gpt_3_5_turbo(questionidx, topicidx, query, summarytype=0, su
 
     finalsummary = ''
     
+    prefix = ''
     for chunk in summarystream:
         try:
             finalsummary += chunk.choices[0].delta.content
@@ -707,4 +708,25 @@ def summary_stream_gpt_3_5_turbo(questionidx, topicidx, query, summarytype=0, su
                     continue
             except:
                 continue
-        yield chunk
+        # try:
+        #     print(chunk.choices[0].delta.content)
+        #     yield chunk.choices[0].delta.content
+
+        #     yield '\n'
+        #     response.flush()
+        # except:
+        #     pass
+        # make the chunk into a json
+        chunk = json.dumps(chunk)
+        if prefix:
+            # Combine the prefix and the current chunk
+            chunk = prefix + chunk
+            # Reset the prefix
+            prefix = ''
+        if not chunk.endswith('}'):
+            # Store the prefix for the next chunk
+            prefix = chunk
+        else:
+            yield chunk
+            yield '/n'
+        # response.flush()
