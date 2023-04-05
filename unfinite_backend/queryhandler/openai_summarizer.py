@@ -512,7 +512,7 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
         return _meta
 
     previoussummary = QuestionSummary.objects.filter(questionidx=questionidx, idx=topicidx, query=query, answertype=summarytype).first()
-    previous_url = json.loads(previoussummary.urls)
+    old_reference_url_from_db = json.loads(previoussummary.urls)
     if previoussummary:
         print("found previous summary")
         metadata = json.loads(previoussummary.urls)
@@ -521,17 +521,18 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
             print(metadata, "metadata")
             metadata = metadata.setdefault("metadata", [])
             metadata = {o["url"]: o for o in metadata}
-            previous_url_list = [o["url"] for o in previous_url]
+            old_reference_url_from_db_list = [o["url"] for o in old_reference_url_from_db]
         # old previous summary urls cols is a list of urls instead of a dict
         else:
             metadata = {"title": "unknown",
-                        "source": "unk",
+                        "source": "unknown",
                         "summary": "lorem ipsum ",
                         "content_length": "0",
                         "content_read_time": "0",
-                        "status": "0"}
-            previous_url_list = previoussummary.urls
-        return previoussummary.summary, previoussummary, True, metadata, previous_url_list
+                        "status": "404"}
+
+            print(old_reference_url_from_db, "old_reference_url_from_db_list")
+        return previoussummary.summary, previoussummary, True, metadata, old_reference_url_from_db
     
     relevantquestions = Relevantquestions.objects.get(query=query, idx=topicidx)
     if len(relevantquestions.questions) == 0:
