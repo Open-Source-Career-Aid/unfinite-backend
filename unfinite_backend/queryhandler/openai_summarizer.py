@@ -618,8 +618,9 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
     # driver.quit()
     s.save()
     # metadata = metadata_getter(s)
-
-    return finalsummary, s, False, url_metadata, new_url_metadata
+    _url_metadata = {i: o for i, o in enumerate(url_metadata["metadata"], start=1)}
+    # old_reference_url_from_db_list = [o["url"] for o in metadata["metadata"]]
+    return finalsummary, s, False, _url_metadata, new_url_metadata
 
 
 def summary_stream_gpt_3_5_turbo(questionidx, topicidx, query, summarytype=0, summarymodel='gpt-3.5-turbo'):
