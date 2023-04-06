@@ -650,6 +650,14 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
 
     return finalsummary, s, False
 
+
+def metadata_setter(obj: list):
+    _url_obj = [{"title": k[0], "source": k[1], "summary": k[2], "content_read_time": k[3], "url": k[4]} for k in obj]
+    _meta = {}
+    _meta.setdefault("metadata", _url_obj)
+    return _meta
+
+
 def teststream():
 
     loremtext = '''Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec euismod, nisl eget ultricies ultricies, nunc nisl aliquam nunc, vitae aliquam nisl nunc eu nunc. Nulla f'''
@@ -666,9 +674,6 @@ def summary_stream_gpt_3_5_turbo(questionidx, topicidx, query, summarytype=0, su
 
     if previoussummary:
         print("found previous summary")
-        # metadata = metadata_getter(previoussummary)
-        # print(metadata)
-        # return previoussummary.summary, previoussummary, True
         yield json.dumps({'choices': [{'delta': {'content': previoussummary.summary}}]})
         yield '\n'
         return
@@ -746,7 +751,7 @@ def summary_stream_gpt_3_5_turbo(questionidx, topicidx, query, summarytype=0, su
         # print(chunk.choices[0].finish_reason)
         try:
             if chunk.choices[0].finish_reason == 'stop':
-                s = QuestionSummary(questionidx=questionidx, idx=topicidx, query=query, summary=finalsummary, urls=json.dumps(relevanturls), answertype=summarytype)
+                s = QuestionSummary(questionidx=questionidx, idx=topicidx, query=query, summary=finalsummary, urls=json.dumps(metadata_setter(relevanturls)), answertype=summarytype)
                 s.save()
                 continue
             if chunk.choices[0].delta.role == 'assistant':

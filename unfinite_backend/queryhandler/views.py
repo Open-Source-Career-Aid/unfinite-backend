@@ -229,6 +229,12 @@ def references(request):
     if len(qs) == 0:
         return JsonResponse(data={'detail':f'Question Summary doesn\'t exist'}, status=500)
     
-    urls = qs[0].urls
-
-    return JsonResponse(data={'urls': urls}, status=200)
+    urls_meta = qs[0].urls
+    urls_meta = json.loads(urls_meta)
+    print(urls_meta)
+    if type(urls_meta) == list:
+        return JsonResponse(data={'urls': json.dumps(urls_meta), 'metadata': {}}, status=200)
+    else:
+        url_metadata = {i: o for i, o in enumerate(urls_meta["metadata"], start=1)}
+        old_reference_url_from_db_list = json.dumps([o["url"] for o in urls_meta["metadata"]])
+        return JsonResponse(data={'urls': old_reference_url_from_db_list, 'metadata': url_metadata}, status=200)
