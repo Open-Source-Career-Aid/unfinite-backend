@@ -244,6 +244,7 @@ def summary(request):
     return JsonResponse(data=r2, status=200)
 
 def summary_stream(request):
+
     data = json.loads(request.body)
     query_id = data.get('id')
     topic_num = data.get('topic')
@@ -269,7 +270,7 @@ def summary_stream(request):
                 yield chunk
 
     # Forward the response as a streaming response
-    r = StreamingHttpResponse(stream_response(response), content_type='text/plain')
+    r = StreamingHttpResponse(stream_response(response), content_type='application/json')
 
     # Set any headers that are required for the response
     r['Content-Disposition'] = f'attachment; filename="{query_id}.json"'
@@ -486,3 +487,28 @@ def get_thumbs(request):
         out.append(2)
 
     return JsonResponse(data={'thumbs':json.dumps(out)}, status=200)
+
+@requires_authentication
+def references(request):
+
+    data = json.loads(request.body)
+    query_id = data.get('id')
+    topic_num = data.get('topic')
+    ques_num = data.get('question')
+
+    # all fields must be provided!
+    if query_id is None or topic_num is None or ques_num is None:
+        return JsonResponse(data={'detail': 'Missing query_id or topic or question'}, status=400)
+
+    if len(Query.objects.filter(id=query_id)) == 0:
+        return JsonResponse(data={'detail': 'No such query'}, status=400)
+    
+    response = requests.post(f'{settings.QUERYHANDLER_URL}references/', headers={'Authorization': settings.QUERYHANDLER_KEY}, json=data, stream=True)
+
+    if response.status_code != 200:
+        return JsonResponse(data={'detail': 'QueryHandler returned error'}, status=400)
+    
+    urls = json.loads(response.content)
+    
+    # print(response.content)
+    return JsonResponse(data=urls, status=200)

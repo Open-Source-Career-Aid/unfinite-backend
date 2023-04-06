@@ -20,4 +20,5 @@ urlpatterns = [
     path('questions/', views.questions, name='api-questions'),
     path('summary/', views.summary, name='api-summary'),
     path('summary_stream/', views.summary_stream, name='api-summary-stream'),
+    path('references/', views.references, name='api-references'),
 ]

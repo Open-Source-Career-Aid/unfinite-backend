@@ -650,6 +650,16 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
 
     return finalsummary, s, False
 
+def teststream():
+
+    loremtext = '''Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec euismod, nisl eget ultricies ultricies, nunc nisl aliquam nunc, vitae aliquam nisl nunc eu nunc. Nulla f'''
+
+    words = loremtext.split(' ')
+
+    for i in range(len(words)):
+        # time.sleep(0.1)
+        yield {'text': words[i]}
+
 def summary_stream_gpt_3_5_turbo(questionidx, topicidx, query, summarytype=0, summarymodel='gpt-3.5-turbo'):
 
     previoussummary = QuestionSummary.objects.filter(questionidx=questionidx, idx=topicidx, query=query, answertype=summarytype).first()
@@ -658,8 +668,11 @@ def summary_stream_gpt_3_5_turbo(questionidx, topicidx, query, summarytype=0, su
         print("found previous summary")
         # metadata = metadata_getter(previoussummary)
         # print(metadata)
-        return previoussummary.summary, previoussummary, True
-    
+        # return previoussummary.summary, previoussummary, True
+        yield json.dumps({'choices': [{'delta': {'content': previoussummary.summary}}]})
+        yield '\n'
+        return
+
     relevantquestions = Relevantquestions.objects.get(query=query, idx=topicidx)
     if len(relevantquestions.questions) == 0:
         raise Exception("No relevant questions found for this topic!")
@@ -672,8 +685,8 @@ def summary_stream_gpt_3_5_turbo(questionidx, topicidx, query, summarytype=0, su
 
     searchurls = [x[0] for x in bingapi(summaryquery)]
 
-    # summaries = []
-    # relevanturls = []
+    summaries = []
+    relevanturls = []
     with Pool(5) as p:
         tuples = p.map(pooled_scrape, searchurls[:5])
 
@@ -693,21 +706,22 @@ def summary_stream_gpt_3_5_turbo(questionidx, topicidx, query, summarytype=0, su
     messages = definemessages(prompt, summarytype=summarytype)
 
     summarystream = gpt3_3turbo_completion_withstream(messages, summarymodel)
+    # summarystream = teststream()
 
     finalsummary = ''
     
     prefix = ''
     for chunk in summarystream:
-        try:
-            finalsummary += chunk.choices[0].delta.content
-        except:
-            try:
-                if chunk.choices[0].delta.finish_reason == 'stop':
-                    s = QuestionSummary(questionidx=questionidx, idx=topicidx, query=query, summary=finalsummary, urls=json.dumps(relevanturls), answertype=summarytype)
-                    s.save()
-                    continue
-            except:
-                continue
+        # try:
+        #     finalsummary += chunk.choices[0].delta.content
+        # except:
+        #     try:
+        #         if chunk.choices[0].delta.finish_reason == 'stop':
+        #             s = QuestionSummary(questionidx=questionidx, idx=topicidx, query=query, summary=finalsummary, urls=json.dumps(relevanturls), answertype=summarytype)
+        #             s.save()
+        #             continue
+        #     except:
+        #         continue
         # try:
         #     print(chunk.choices[0].delta.content)
         #     yield chunk.choices[0].delta.content
@@ -717,16 +731,29 @@ def summary_stream_gpt_3_5_turbo(questionidx, topicidx, query, summarytype=0, su
         # except:
         #     pass
         # make the chunk into a json
-        chunk = json.dumps(chunk)
-        if prefix:
-            # Combine the prefix and the current chunk
-            chunk = prefix + chunk
-            # Reset the prefix
-            prefix = ''
-        if not chunk.endswith('}'):
-            # Store the prefix for the next chunk
-            prefix = chunk
-        else:
-            yield chunk
-            yield '/n'
+        # chunk = json.dumps(chunk)
+        # if prefix:
+        #     # Combine the prefix and the current chunk
+        #     chunk = prefix + chunk
+        #     # Reset the prefix
+        #     prefix = ''
+        # if not chunk.endswith('}'):
+        #     # Store the prefix for the next chunk
+        #     prefix = chunk
+        # else:
+        #     yield chunk
+        #     yield '/n'
+        # print(chunk.choices[0].finish_reason)
+        try:
+            if chunk.choices[0].finish_reason == 'stop':
+                s = QuestionSummary(questionidx=questionidx, idx=topicidx, query=query, summary=finalsummary, urls=json.dumps(relevanturls), answertype=summarytype)
+                s.save()
+                continue
+            if chunk.choices[0].delta.role == 'assistant':
+                continue
+        except:
+            finalsummary += chunk.choices[0].delta.content
+            pass
+        yield json.dumps(chunk)
+        yield '\n'
         # response.flush()
