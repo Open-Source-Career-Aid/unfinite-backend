@@ -512,16 +512,17 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
         return _meta
 
     previoussummary = QuestionSummary.objects.filter(questionidx=questionidx, idx=topicidx, query=query, answertype=summarytype).first()
-    old_reference_url_from_db = json.loads(previoussummary.urls)
     if previoussummary:
         print("found previous summary")
+        old_reference_url_from_db = json.loads(previoussummary.urls)
+        print(previoussummary.summary)
         metadata = json.loads(previoussummary.urls)
-        print(metadata, type(metadata))
         if type(metadata) == dict:
             print(metadata, "metadata")
-            metadata = metadata.setdefault("metadata", [])
-            metadata = {o["url"]: o for o in metadata}
-            old_reference_url_from_db_list = [o["url"] for o in old_reference_url_from_db]
+            url_metadata = {i : o for i, o in enumerate(metadata["metadata"], start=1)}
+            old_reference_url_from_db_list = [o["url"] for o in metadata["metadata"]]
+            print(url_metadata, "url_metadata", type(url_metadata))
+            return previoussummary.summary, previoussummary, True, url_metadata, old_reference_url_from_db_list
         # old previous summary urls cols is a list of urls instead of a dict
         else:
             metadata = {"title": "unknown",
@@ -531,9 +532,9 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
                         "content_read_time": "0",
                         "status": "404"}
 
-            print(old_reference_url_from_db, "old_reference_url_from_db_list")
-        return previoussummary.summary, previoussummary, True, metadata, old_reference_url_from_db
-    
+            return previoussummary.summary, previoussummary, True, metadata, old_reference_url_from_db
+
+    print("no previous summary found")
     relevantquestions = Relevantquestions.objects.get(query=query, idx=topicidx)
     if len(relevantquestions.questions) == 0:
         raise Exception("No relevant questions found for this topic!")
@@ -559,8 +560,9 @@ def summary_generation_model_gpt3_5_turbo(questionidx, topicidx, query, summaryt
     print('got summaries')
     summaries = list(itertools.chain.from_iterable(map(lambda x: x[0], tuples)))
     relevanturls = list(itertools.chain.from_iterable(map(lambda x: x[1], tuples)))
-    url_metadata = metadata_getter(relevanturls) # get metadata for urls and add to the summary mappping
-    new_url_metadata = {o["url"]: o for o in url_metadata}
+    url_metadata = metadata_getter(relevanturls)  # get metadata for urls and add to the summary mappping
+    print(url_metadata)
+    new_url_metadata = [o["url"] for o in url_metadata["metadata"]]
 
     # # removing summaries that are None or too short
     # summaries = []

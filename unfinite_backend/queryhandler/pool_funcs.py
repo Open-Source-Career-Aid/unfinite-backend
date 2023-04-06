@@ -302,12 +302,13 @@ def getpagetext(url):
             text+=element.get_text(strip=True) + '\n'
             # print(element.name, ":", element.get_text(strip=True))
     #print('\n\n\n Got data from the urls! \n\n\n')
-    return (text, url, content_meta)
+    # print(content_meta, len(text), type(url))
+    return (text, content_meta)
 
 
 def pooled_scrape(url):
     print('scraping: ', url)
-    pagedata, url, url_meta = getpagetext(url)
+    pagedata, url_meta = getpagetext(url)
     summaries = []
     _metadata = []
 
