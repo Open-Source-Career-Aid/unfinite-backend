@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.http import StreamingHttpResponse
+from wsgiref.util import FileWrapper
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from .openai_api import query_generation_model, questions_generation_model
@@ -209,9 +210,18 @@ def summary_stream(request):
     stream = summary_stream_gpt_3_5_turbo(ques_num, topic_num, q, summarytype=int(answer_type))
     # print(metadata)
 
+    def stream_generator():
+        for chunk in stream:
+            # Encode each chunk as JSON
+            yield chunk
+
+    chunk_size = 1024
 
     # return JsonResponse(data={'summary': summary, 'urls':s.urls, 'urlidx':s.urlidx, 'id': s.id, 'was_new':was_new}, status=200)
-    return StreamingHttpResponse(stream, content_type='application/json')
+    response =  StreamingHttpResponse(stream_generator(), content_type='application/json')
+    response.block_size = chunk_size
+
+    return response
 
 @csrf_exempt
 @require_internal
