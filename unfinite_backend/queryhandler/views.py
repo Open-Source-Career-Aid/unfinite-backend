@@ -16,6 +16,7 @@ from django.apps import apps
 Query = apps.get_model('api', 'Query')
 SERP = apps.get_model('api', 'SERP')
 Relevantquestions = apps.get_model('api', 'Relevantquestions')
+QuestionSummary = apps.get_model('api', 'QuestionSummary')
 
 def require_internal(func):
     # cool and nice wrapper that keeps anybody other than the API from making 
@@ -210,4 +211,24 @@ def summary_stream(request):
 
 
     # return JsonResponse(data={'summary': summary, 'urls':s.urls, 'urlidx':s.urlidx, 'id': s.id, 'was_new':was_new}, status=200)
-    return StreamingHttpResponse(stream, content_type='text/event-stream')
+    return StreamingHttpResponse(stream, content_type='application/json')
+
+@csrf_exempt
+@require_internal
+def references(request):
+
+    d = json.loads(request.body)
+    
+    query_id = d['id']
+    topic_num = d['topic']
+    ques_num = d['question']
+    answer_type = d['answertype']
+
+    # find the query object with id query_id
+    qs = QuestionSummary.objects.filter(query=query_id, idx=topic_num, questionidx=ques_num, answertype=answer_type)
+    if len(qs) == 0:
+        return JsonResponse(data={'detail':f'Question Summary doesn\'t exist'}, status=500)
+    
+    urls = qs[0].urls
+
+    return JsonResponse(data={'urls': urls}, status=200)
