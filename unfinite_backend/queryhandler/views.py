@@ -1,9 +1,10 @@
 from django.shortcuts import render
 from django.http import JsonResponse
+from django.http import StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from .openai_api import query_generation_model, questions_generation_model
-from .openai_summarizer import summary_generation_model, summary_generation_model_gpt3_5_turbo
+from .openai_summarizer import summary_generation_model, summary_generation_model_gpt3_5_turbo, summary_stream_gpt_3_5_turbo
 import json
 from .scrape import attach_links, google_SERP, serphouse, scrapingrobot, scrapeitserp, bingapi
 # Create your views here.
@@ -15,6 +16,7 @@ from django.apps import apps
 Query = apps.get_model('api', 'Query')
 SERP = apps.get_model('api', 'SERP')
 Relevantquestions = apps.get_model('api', 'Relevantquestions')
+QuestionSummary = apps.get_model('api', 'QuestionSummary')
 
 def require_internal(func):
     # cool and nice wrapper that keeps anybody other than the API from making 
@@ -164,8 +166,69 @@ def summary(request):
 
     # generate summary
     # summary, s, was_new = summary_generation_model(ques_num, topic_num, q)
-    summary, s, was_new = summary_generation_model_gpt3_5_turbo(ques_num, topic_num, q, summarytype=int(answer_type))
+    summary, s, was_new, metadata = summary_generation_model_gpt3_5_turbo(ques_num, topic_num, q, summarytype=int(answer_type))
     # print(metadata)
 
 
     return JsonResponse(data={'summary': summary, 'urls':s.urls, 'urlidx':s.urlidx, 'id': s.id, 'was_new':was_new}, status=200)
+
+@csrf_exempt
+@require_internal
+def summary_stream(request):
+
+    d = json.loads(request.body)
+    
+    query_id = d['id']
+    topic_num = d['topic']
+    ques_num = d['question']
+    answer_type = d['answertype']
+
+    # find the query object with id query_id
+    qs = Query.objects.filter(id=query_id)
+    if len(qs) == 0:
+        return JsonResponse(data={'detail':f'Query with ID {query_id} doesn\'t exist'}, status=500)
+    
+    q = qs[0]
+    # print(q)
+
+    skeleton = json.loads(q.skeleton)
+
+    if topic_num >= len(skeleton): # make sure that topic_num is a valid index into the skeleton
+        return JsonResponse(data={'detail':f'Invalid topic {topic_num}'}, status=500)
+
+    rs = Relevantquestions.objects.filter(query=q, idx=topic_num)
+    if len(rs) == 0:
+        return JsonResponse(data={'detail':f'No relevant questions for topic {topic_num}'}, status=500)
+    
+    r = rs[0]
+
+    questions = json.loads(r.questions)[ques_num]
+
+    # generate summary
+    # summary, s, was_new = summary_generation_model(ques_num, topic_num, q)
+    stream = summary_stream_gpt_3_5_turbo(ques_num, topic_num, q, summarytype=int(answer_type))
+    # print(metadata)
+
+
+    # return JsonResponse(data={'summary': summary, 'urls':s.urls, 'urlidx':s.urlidx, 'id': s.id, 'was_new':was_new}, status=200)
+    return StreamingHttpResponse(stream, content_type='application/json')
+
+@csrf_exempt
+@require_internal
+def references(request):
+
+    d = json.loads(request.body)
+    
+    query_id = d['id']
+    topic_num = d['topic']
+    ques_num = d['question']
+    answer_type = d['answertype']
+
+    # find the query object with id query_id
+    qs = QuestionSummary.objects.filter(query=query_id, idx=topic_num, questionidx=ques_num, answertype=answer_type)
+    if len(qs) == 0:
+        return JsonResponse(data={'detail':f'Question Summary doesn\'t exist'}, status=500)
+    
+    urls = qs[0].urls
+
+    return JsonResponse(data={'urls': urls}, status=200)

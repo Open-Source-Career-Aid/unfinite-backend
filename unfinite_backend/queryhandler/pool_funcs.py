@@ -213,7 +213,7 @@ def summarizewithextractive(text, top_n, howmanychunks):
 
 def contentfinder_noJS(url):
 
-    timeout = 1
+    timeout = 2
 
     #print('finding content for: ', url)
 
