@@ -56,6 +56,11 @@ class UnfiniteUser(AbstractUser):
 
     objects = UserManager()
 
+    def __repr__(self):
+        return self.email + ' ' + str(self.is_learner) + ' ' + str(self.is_staff)
+    def __str__(self):
+        return self.email
+
 # class Learner(models.Model):
 #     user = models.OneToOneField(UnfiniteUser, on_delete=models.CASCADE, primary_key=True)
 
@@ -100,6 +105,11 @@ class Query(models.Model):
             self.created = timezone.now()
         self.updated = timezone.now()
         return super(Query, self).save(*args, **kwargs)
+
+    def __repr__(self):
+        return self.user.email + ' - ' + self.query_text + ' - ' + self.skeleton + ' - ' + str(self.num_tokens) + ' - ' + str(self.num_searched)
+    def __str__(self):
+        return self.user.email + ' - ' + self.query_text
 
 class SERP(models.Model):
 
@@ -194,7 +204,14 @@ class Completion(models.Model):
         if not self.id:
             self.created = timezone.now()
         self.updated = timezone.now()
-        return super(Completion, self).save(*args, **kwargs) 
+        return super(Completion, self).save(*args, **kwargs)
+
+    def __repr__(self):
+        return self.user.email + ' - ' + self.query.query_text + ' - ' + self.completion + ' - ' + str(self.track)
+
+    def __str__(self):
+        return self.user.email + ' - ' + self.completion + ' - ' + str(self.track)
+
 
 class EventLog(models.Model):
 
@@ -253,3 +270,5 @@ class QuestionSummary(models.Model):
             self.created = timezone.now()
         self.updated = timezone.now()
         return super(QuestionSummary, self).save(*args, **kwargs)
+    # def __str__(self):
+    #     return f'{self.author} created post on  {self.timestamps}'
