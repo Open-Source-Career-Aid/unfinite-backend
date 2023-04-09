@@ -113,11 +113,7 @@ def similarity(v1, v2):  # return dot product of two vectors
 def search_index(text, data, count=10):
 	vector = gpt3_embedding(text)
 	scores = list()
-	for i in data:
-		score = similarity(vector, i['vector'])
-		#print(score)
-		scores.append({'filename': i['filename'], 'page_num': i['page_num'], 'score': score})
-	ordered = sorted(scores, key=lambda d: d['score'], reverse=True)
+	# perform the vector search
 	return ordered[0:count]
 
 def embedpdf(url):
