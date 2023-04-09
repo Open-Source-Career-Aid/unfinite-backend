@@ -8,7 +8,7 @@ import numpy as np
 import requests
 
 # enter openai api key here
-openai.api_key = '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'
+
 
 def extractpdf(url):
     """
