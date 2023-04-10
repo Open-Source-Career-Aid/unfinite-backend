@@ -39,6 +39,8 @@ DOCHANDLER_URL = str(os.getenv('DOCHANDLER_URL'))
 # get openai api key
 OPENAI_API_KEY = str(os.getenv('OPENAI_API_KEY'))
 
+PINECONE_KEY = str(os.getenv('PINECONE_KEY'))
+
 # CORS
 CORS_ALLOW_CREDENTIALS = True
 CORS_ORIGIN_WHITELIST = ['http://localhost:3000'] # For development of the front-end. Will be https://app.unfinite.co
