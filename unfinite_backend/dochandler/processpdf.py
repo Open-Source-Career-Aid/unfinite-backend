@@ -72,7 +72,8 @@ def gpt3_3turbo_completion(prompt, summarymodel='gpt-3.5-turbo'):
 	{
 		"role": "user",
 		"content": """Instructions: 
-	1. Structure the answer into multiple paragraphs where necessary."""
+	1. Structure the answer into multiple paragraphs where necessary.
+    2. Say "teh text doesn't provide the answer to the query" if you don't find the answer in the attached texts. Don't try to give unnecessary answers."""
 	},
 	{
 		"role": "user",
@@ -80,7 +81,7 @@ def gpt3_3turbo_completion(prompt, summarymodel='gpt-3.5-turbo'):
 	}]
 
 	temperature = 0.0
-	max_length = 350
+	max_length = 750
 	top_p = 1.0
 	frequency_penalty = 0.0
 	presence_penalty = 0.0

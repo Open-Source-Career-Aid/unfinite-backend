@@ -75,7 +75,7 @@ def summarize_document(request):
         filter={
             "document": {"$in": list(map(str, json.loads(docids)))},
         },
-        top_k=4,
+        top_k=3,
         include_metadata=True
     )
 
