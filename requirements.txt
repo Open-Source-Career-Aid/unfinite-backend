@@ -18,3 +18,5 @@ numpy
 tldextract
 nltk
 fake-useragent
+PyPDF2==2.5.0
+pinecone-client

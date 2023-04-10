@@ -21,4 +21,6 @@ urlpatterns = [
     path('summary/', views.summary, name='api-summary'),
     path('summary_stream/', views.summary_stream, name='api-summary-stream'),
     path('references/', views.references, name='api-references'),
+    path('summarize_document/', views.summarize_document, name='api-summarize-document'),
+    path('index_document/', views.embed_document, name='api-embed-document'),
 ]
