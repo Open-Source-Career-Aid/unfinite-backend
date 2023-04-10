@@ -267,12 +267,12 @@ def summary_stream(request):
     #     return JsonResponse(data={'detail': 'Summary failed'}, status=500)
 
     def stream_response(response):
-        for chunk in response.iter_content(chunk_size=1024):
+        for chunk in response.iter_content(chunk_size=32):
             if chunk:
                 yield chunk
 
     # Forward the response as a streaming response
-    r = StreamingHttpResponse(stream_response(response), content_type='application/json')
+    r = StreamingHttpResponse(stream_response(response), content_type='text/event-stream')
 
     # Set any headers that are required for the response
     r['Content-Disposition'] = f'attachment; filename="{query_id}.json"'
@@ -458,6 +458,7 @@ def get_tracking_completions(request):
     return JsonResponse(data={'completions':[{'id':c.query.id, 'title':c.query.query_text, 'completion':json.dumps(c.completion)} for c in cs]}, status=200)
 
 
+@require_POST
 @requires_authentication
 def get_thumbs(request):
 
@@ -490,6 +491,8 @@ def get_thumbs(request):
 
     return JsonResponse(data={'thumbs':json.dumps(out)}, status=200)
 
+
+@require_POST
 @requires_authentication
 def references(request):
 
@@ -535,7 +538,6 @@ def embed_document(request):
 
     if response.status_code != 200:
         return JsonResponse(data={'detail': 'QueryHandler returned error'}, status=400)
-
     return JsonResponse(data=response.json(), status=200)
 
 

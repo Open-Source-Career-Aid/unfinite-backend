@@ -2,12 +2,16 @@ from django.db import models
 from django.utils import timezone
 import json, itertools, openai
 from .processpdf import gpt3_embedding
-openai.api_key = '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'
+from django.conf import settings
+
+openai.api_key = settings.OPENAI_API_KEY
+devstr = '' if settings.IS_PRODUCTION else 'dev-'
+
 def openai_to_pinecone(embedding, document_id):
     page = embedding['index']
     vec = embedding['embedding']
 
-    return (f"dev-{document_id}-{page}", vec, {'document': str(document_id), 'page': str(page)})
+    return (f"{devstr}{document_id}-{page}", vec, {'document': str(document_id), 'page': str(page), 'dev': settings.IS_PRODUCTION})
 
 def chunks(iterable, batch_size=100):
     it = iter(iterable)
@@ -46,4 +50,3 @@ class Document(models.Model):
 
         for chunk in chunks(to_upsert):
             print(index.upsert(chunk))
-

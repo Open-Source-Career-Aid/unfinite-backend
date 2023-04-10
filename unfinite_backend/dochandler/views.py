@@ -7,9 +7,10 @@ from django.conf import settings
 import json, pinecone, openai
 from .processpdf import *
 from .models import Document
+from django.conf import settings
 
-openai.api_key = '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'
-pinecone.init(api_key="9695abbd-6079-4289-99bb-1162a1e06f53", environment="us-central1-gcp")
+openai.api_key = settings.OPENAI_API_KEY
+pinecone.init(api_key=settings.PINECONE_KEY, environment="us-central1-gcp")
 index = pinecone.Index('unfinite-embeddings')
 
 # Create your views here.
@@ -38,15 +39,14 @@ def embed_document(request):
     
     url = d.get('url')
     user_id = d.get('user') # make sure these exist elsewhere: ../api/views.py
-
     if len(Document.objects.filter(url=url)) != 0:
+        print("document with ID already exists")
         return JsonResponse({'detail':'Document already embedded', 'document_id': Document.objects.get(url=url).id}, status=200)
 
     pdf_text = extractpdf(url)
     doc = Document.objects.create(url=url, user_id=user_id, document_pages=json.dumps(pdf_text), num_pages=len(pdf_text))
     doc.save()
     doc.embed(index)
-
     return JsonResponse({'Detail':'Successfully indexed the document.', 'document_id': doc.id}, status=200)
 
 def matches_to_text(result):
@@ -74,8 +74,9 @@ def summarize_document(request):
         vector=question_embedding,
         filter={
             "document": {"$in": list(map(str, json.loads(docids)))},
+            "dev": {"$eq": settings.IS_PRODUCTION},
         },
-        top_k=3,
+        top_k=2,
         include_metadata=True
     )
 
