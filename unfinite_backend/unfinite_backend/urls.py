@@ -24,6 +24,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
     path('queryhandler/', include('queryhandler.urls')),
+    path('dochandler/', include('dochandler.urls')),
     re_path(r"^$", render_react),
     re_path(r"^(?:.*)/?$", render_react),
 ]

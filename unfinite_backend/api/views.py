@@ -535,7 +535,6 @@ def embed_document(request):
 
     if response.status_code != 200:
         return JsonResponse(data={'detail': 'QueryHandler returned error'}, status=400)
-
     return JsonResponse(data=response.json(), status=200)
 
 

@@ -10,7 +10,7 @@ def openai_to_pinecone(embedding, document_id):
     page = embedding['index']
     vec = embedding['embedding']
 
-    return (f"dev-{document_id}-{page}", vec, {'document': str(document_id), 'page': str(page)})
+    return (f"{document_id}-{page}", vec, {'document': str(document_id), 'page': str(page), 'dev': False})
 
 def chunks(iterable, batch_size=100):
     it = iter(iterable)
@@ -49,4 +49,3 @@ class Document(models.Model):
 
         for chunk in chunks(to_upsert):
             print(index.upsert(chunk))
-

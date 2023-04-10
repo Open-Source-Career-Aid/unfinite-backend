@@ -39,15 +39,14 @@ def embed_document(request):
     
     url = d.get('url')
     user_id = d.get('user') # make sure these exist elsewhere: ../api/views.py
-
     if len(Document.objects.filter(url=url)) != 0:
+        print("document with ID already exists")
         return JsonResponse({'detail':'Document already embedded', 'document_id': Document.objects.get(url=url).id}, status=200)
 
     pdf_text = extractpdf(url)
     doc = Document.objects.create(url=url, user_id=user_id, document_pages=json.dumps(pdf_text), num_pages=len(pdf_text))
     doc.save()
     doc.embed(index)
-
     return JsonResponse({'Detail':'Successfully indexed the document.', 'document_id': doc.id}, status=200)
 
 def matches_to_text(result):
@@ -75,6 +74,7 @@ def summarize_document(request):
         vector=question_embedding,
         filter={
             "document": {"$in": list(map(str, json.loads(docids)))},
+            "dev": {"$eq": False},
         },
         top_k=3,
         include_metadata=True
