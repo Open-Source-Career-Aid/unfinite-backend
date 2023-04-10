@@ -74,7 +74,7 @@ def summarize_document(request):
         vector=question_embedding,
         filter={
             "document": {"$in": list(map(str, json.loads(docids)))},
-            "dev": {"$eq": settings.IS_PRODUCTION},
+            "dev": {"$eq": !settings.IS_PRODUCTION},
         },
         top_k=2,
         include_metadata=True
