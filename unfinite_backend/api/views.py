@@ -267,12 +267,12 @@ def summary_stream(request):
     #     return JsonResponse(data={'detail': 'Summary failed'}, status=500)
 
     def stream_response(response):
-        for chunk in response.iter_content(chunk_size=1024):
+        for chunk in response.iter_content(chunk_size=32):
             if chunk:
                 yield chunk
 
     # Forward the response as a streaming response
-    r = StreamingHttpResponse(stream_response(response), content_type='application/json')
+    r = StreamingHttpResponse(stream_response(response), content_type='text/event-stream')
 
     # Set any headers that are required for the response
     r['Content-Disposition'] = f'attachment; filename="{query_id}.json"'

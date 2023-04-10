@@ -687,12 +687,15 @@ def summary_stream_gpt_3_5_turbo(questionidx, topicidx, query, summarytype=0, su
 
     summaries = []
     relevanturls = []
-    with Pool(5) as p:
-        tuples = p.map(pooled_scrape, searchurls[:5])
-
+    #with Pool(5) as p:
+    #    tuples = p.map(pooled_scrape, searchurls[:5])
+    for i in range(len(searchurls[:5])):
+        t = pooled_scrape(searchurls[i])
+        summaries += t[0]
+        relevanturls += t[1]
     print('got summaries')
-    summaries = list(itertools.chain.from_iterable(map(lambda x: x[0], tuples)))
-    relevanturls = list(itertools.chain.from_iterable(map(lambda x: x[1], tuples)))
+    #summaries = list(itertools.chain.from_iterable(map(lambda x: x[0], tuples)))
+    #relevanturls = list(itertools.chain.from_iterable(map(lambda x: x[1], tuples)))
 
     prompt = ""
 
