@@ -73,7 +73,7 @@ def gpt3_3turbo_completion(prompt, summarymodel='gpt-3.5-turbo'):
 		"role": "user",
 		"content": """Instructions: 
 	1. Structure the answer into multiple paragraphs where necessary.
-    2. Say "teh text doesn't provide the answer to the query" if you don't find the answer in the attached texts. Don't try to give unnecessary answers."""
+    2. Say "The text doesn't provide the answer to the query" if you don't find the answer in the attached texts. Don't try to give unnecessary answers."""
 	},
 	{
 		"role": "user",
