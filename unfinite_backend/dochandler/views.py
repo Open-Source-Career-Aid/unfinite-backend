@@ -76,7 +76,7 @@ def summarize_document(request):
             "document": {"$in": list(map(str, json.loads(docids)))},
             "dev": {"$eq": False},
         },
-        top_k=3,
+        top_k=2,
         include_metadata=True
     )
 

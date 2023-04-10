@@ -458,6 +458,7 @@ def get_tracking_completions(request):
     return JsonResponse(data={'completions':[{'id':c.query.id, 'title':c.query.query_text, 'completion':json.dumps(c.completion)} for c in cs]}, status=200)
 
 
+@require_POST
 @requires_authentication
 def get_thumbs(request):
 
@@ -490,6 +491,8 @@ def get_thumbs(request):
 
     return JsonResponse(data={'thumbs':json.dumps(out)}, status=200)
 
+
+@require_POST
 @requires_authentication
 def references(request):
 
