@@ -34,6 +34,10 @@ SCRAPING_KEY = str(os.getenv('SCRAPING_KEY'))
 QUERYHANDLER_KEY = str(os.getenv('QUERYHANDLER_KEY'))
 QUERYHANDLER_URL = str(os.getenv('QUERYHANDLER_URL'))
 
+DOCHANDLER_URL = str(os.getenv('DOCHANDLER_URL'))
+
+PINECONE_KEY = str(os.getenv('PINECONE_KEY'))
+
 BING_KEY = str(os.getenv('BING_KEY'))
 
 # get openai api key
@@ -76,7 +80,8 @@ INSTALLED_APPS = [
     'corsheaders', # For CORS stuff
     'api',
     'queryhandler',
-    'import_export'
+    'import_export',
+    'dochandler'
 ]
 
 MIDDLEWARE = [

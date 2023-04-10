@@ -514,3 +514,50 @@ def references(request):
     
     # print(response.content)
     return JsonResponse(data=urls, status=200)
+
+
+@requires_authentication
+def embed_document(request):
+
+    data = json.loads(request.body)
+
+    url = data.get('url')
+    if url is None:
+        return JsonResponse({'detail':'failure'}, status=500)
+    elif url.strip() == '':
+        return JsonResponse({'detail':'failure'}, status=500)
+    elif url[-4:] != '.pdf':
+        return JsonResponse({'detail':'failure'}, status=500)
+
+    data['user'] = request.user.id
+
+    response = requests.post(f'{settings.DOCHANDLER_URL}embed_document/', headers={'Authorization': settings.QUERYHANDLER_KEY}, json=data)
+
+    if response.status_code != 200:
+        return JsonResponse(data={'detail': 'QueryHandler returned error'}, status=400)
+
+    return JsonResponse(data=response.json(), status=200)
+
+
+@requires_authentication
+def summarize_document(request):
+
+    data = json.loads(request.body)
+
+    question = data.get('question')
+    docids = data.get('docids') 
+
+    if question is None:
+        return JsonResponse({'detail':'failure'}, status=400)
+    elif question.strip() == '':
+        return JsonResponse({'detail':'failure'}, status=400)
+
+    if len(json.loads(docids)) == 0:
+        return JsonResponse({'detail':'no document provided'}, status=400)
+
+    response = requests.post(f'{settings.DOCHANDLER_URL}summarize_document/', headers={'Authorization': settings.QUERYHANDLER_KEY}, json=data)
+
+    if response.status_code != 200:
+        return JsonResponse(data={'detail': 'QueryHandler returned error'}, status=400)
+
+    return JsonResponse(data=response.json(), status=200)
