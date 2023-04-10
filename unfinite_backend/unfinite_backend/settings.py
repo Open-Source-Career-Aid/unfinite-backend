@@ -52,6 +52,8 @@ CORS_ALLOW_CREDENTIALS = True
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG')=="True"
 
+IS_PRODUCTION = os.getenv('IS_PRODUCTIOn')=="True"
+
 ALLOWED_HOSTS = ['app.unfinite.co', 'localhost', '3.19.61.62', '127.0.0.1', '3.135.226.130']
 
 #CSRF_COOKIE_SAMESITE = 'Strict'
