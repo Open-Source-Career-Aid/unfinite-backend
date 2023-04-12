@@ -18,5 +18,6 @@ numpy
 tldextract
 nltk
 fake_useragent
-PyPDF2==2.5.0
+PyPDF2
 pinecone-client
+gensim

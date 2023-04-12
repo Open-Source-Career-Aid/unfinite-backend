@@ -24,5 +24,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
     path('queryhandler/', include('queryhandler.urls')),
-    path('dochandler/', include('dochandler.urls'))
+    path('dochandler/', include('dochandler.urls')),
+    path('context/', include('context.urls')),
 ]

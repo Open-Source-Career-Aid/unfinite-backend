@@ -83,7 +83,8 @@ INSTALLED_APPS = [
     'api',
     'queryhandler',
     'import_export',
-    'dochandler'
+    'dochandler',
+    'context',
 ]
 
 MIDDLEWARE = [
