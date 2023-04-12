@@ -3,14 +3,10 @@ from django.utils import timezone
 import json, itertools, openai
 import uuid
 from .processpdf import gpt3_embedding
-<<<<<<< Updated upstream
 from django.conf import settings
 
 openai.api_key = settings.OPENAI_API_KEY
 devstr = '' if settings.IS_PRODUCTION else 'dev-'
-=======
-
-openai.api_key = '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'
 
 # 0 = user, 1 = assistant
 messages = [(0, "You are an expert summarizer and teacher."), (0, "Please summarize the following texts into a short and coherent answer to the question. Make the answer accessible, break it down into points and keep paragraphs short where you can."),
@@ -18,7 +14,6 @@ messages = [(0, "You are an expert summarizer and teacher."), (0, "Please summar
 	1. Structure the answer into multiple paragraphs where necessary.
     2. When the answer is a list of things, always produce a list, not paragraph.
     3. Highlight the answer to the query in the text between ``````.""")]
->>>>>>> Stashed changes
 
 def openai_to_pinecone(embedding, document_id):
     page = embedding['index']
@@ -61,8 +56,6 @@ class Document(models.Model):
 
         for chunk in chunks(to_upsert):
             print(index.upsert(chunk))
-<<<<<<< Updated upstream
-=======
 
 # Model - Thread | Contains - unique id, a list of q/a models, userid foreign key, prompt messages, time stamp.
 class Thread(models.Model):
@@ -160,4 +153,3 @@ class QA(models.Model):
 
         def set_docids(self, docids):
             self.docids = json.dumps(docids)
->>>>>>> Stashed changes

@@ -6,14 +6,10 @@ from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 import json, pinecone, openai
 from .processpdf import *
-<<<<<<< Updated upstream
-from .models import Document
-from django.conf import settings
-=======
 from .models import Document, Thread, QA, FeedbackModel
 import re
 import uuid
->>>>>>> Stashed changes
+from django.conf import settings
 
 openai.api_key = settings.OPENAI_API_KEY
 pinecone.init(api_key=settings.PINECONE_KEY, environment="us-central1-gcp")
@@ -55,11 +51,6 @@ def embed_document(request):
     
     url = d.get('url').strip()
     user_id = d.get('user') # make sure these exist elsewhere: ../api/views.py
-<<<<<<< Updated upstream
-    if len(Document.objects.filter(url=url)) != 0:
-        print("document with ID already exists")
-        return JsonResponse({'detail':'Document already embedded', 'document_id': Document.objects.get(url=url).id}, status=200)
-=======
 
     # create a new thread for this request
     new_id = uuid.uuid4().hex[:16]
@@ -75,18 +66,13 @@ def embed_document(request):
 
     if len(Document.objects.filter(url=url)) != 0:
         return JsonResponse({'detail':'Document already embedded', 'document_id': Document.objects.get(url=url).id, 'thread_id':threadid}, status=200)
->>>>>>> Stashed changes
 
     pdf_text = extractpdf(url)
     doc = Document.objects.create(url=url, user_id=user_id, document_pages=json.dumps(pdf_text), num_pages=len(pdf_text))
     doc.save()
     doc.embed(index)
-<<<<<<< Updated upstream
-    return JsonResponse({'Detail':'Successfully indexed the document.', 'document_id': doc.id}, status=200)
-=======
 
     return JsonResponse({'Detail':'Successfully indexed the document.', 'document_id': doc.id, 'thread_id':threadid}, status=200)
->>>>>>> Stashed changes
 
 def matches_to_text(result):
 
