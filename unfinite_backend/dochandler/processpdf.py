@@ -9,7 +9,6 @@ import requests
 
 # enter openai api key here
 
-
 def extractpdf(url):
     """
     A function that extracts text from a PDF file given a URL.
@@ -59,6 +58,7 @@ def clean_pdf_text(pdf_text):
 
 	return pdf_text
 
+<<<<<<< Updated upstream
 def gpt3_3turbo_completion(prompt, summarymodel='gpt-3.5-turbo'):
 
 	messages = [{
@@ -79,6 +79,9 @@ def gpt3_3turbo_completion(prompt, summarymodel='gpt-3.5-turbo'):
 		"role": "user",
 		"content": prompt
 	}]
+=======
+def gpt3_3turbo_completion(messages, summarymodel='gpt-3.5-turbo'):
+>>>>>>> Stashed changes
 
 	temperature = 0.0
 	max_length = 750
