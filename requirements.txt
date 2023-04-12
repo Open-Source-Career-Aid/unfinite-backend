@@ -20,3 +20,6 @@ nltk
 fake_useragent
 PyPDF2==2.5.0
 pinecone-client
+transformers
+tensorflow
+torch
