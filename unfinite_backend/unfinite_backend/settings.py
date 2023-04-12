@@ -21,6 +21,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_ROOT= BASE_DIR / 'static/'
 #print(STATIC_ROOT)
 
+# STATICFILES_DIRS = [BASE_DIR / 'unfinitefront/unfinitebeta/build/static', BASE_DIR / 'unfinitefront/unfinitebeta/build/']
+#print(STATICFILE_DIRS)
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
 
@@ -43,7 +45,7 @@ PINECONE_KEY = str(os.getenv('PINECONE_KEY'))
 
 # CORS
 CORS_ALLOW_CREDENTIALS = True
-CORS_ORIGIN_WHITELIST = ['http://localhost:3000'] # For development of the front-end. Will be https://app.unfinite.co
+#CORS_ORIGIN_WHITELIST = ['http://localhost:3000', '3.135.226.130'] # For development of the front-end. Will be https://app.unfinite.co
 
 # NOTE: hopefully default cache is fine for django-ratelimit?
 
@@ -52,18 +54,20 @@ DEBUG = True
 
 IS_PRODUCTION = False
 
-ALLOWED_HOSTS = ['api.unfinite.co', 'localhost', '3.19.61.62', '127.0.0.1']
+ALLOWED_HOSTS = ['app.unfinite.co', 'localhost', '3.19.61.62', '127.0.0.1', '3.135.226.130']
 
-CSRF_COOKIE_SAMESITE = 'Strict'
+#CSRF_COOKIE_SAMESITE = 'Strict'
 SESSION_COOKIE_SAMESITE = 'Strict'
 CSRF_COOKIE_HTTPONLY = False  # if frontend served seperately, this is True
-SESSION_COOKIE_HTTPONLY = True
+# SESSION_COOKIE_HTTPONLY = True
 
-CSRF_TRUSTED_ORIGINS = ['http://localhost:3000'] # For dev. prod: https://app.unfinite.co
+#CSRF_HEADER_NAME = "HTTP_X_CSRFTOKEN"
+CORS_ORIGIN_WHITELIST = ['http://localhost:3000']
+CSRF_TRUSTED_ORIGINS = ['https://app.unfinite.co', 'http://localhost:3000'] # For dev. prod: https://app.unfinite.co
 
 # Enable for production, forces HTTPS for cookies:
 # CSRF_COOKIE_SECURE = True
-# SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = not DEBUG
 
 
 # Application definition
@@ -84,6 +88,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     'corsheaders.middleware.CorsMiddleware', # CORS stuff
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -95,12 +100,19 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'unfinite_backend.urls'
 
+t = []
+if os.getenv("REACT_DIR") is not None:
+    t = [BASE_DIR / os.getenv("REACT_DIR")]
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': t,
         'APP_DIRS': True,
         'OPTIONS': {
+            #'sql_mode': 'traditional',
+            #'isolation_level': 'read committed',
+            #'charset': 'utf8mb4',
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
@@ -172,3 +184,5 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 AUTH_USER_MODEL = 'api.UnfiniteUser'
+
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
