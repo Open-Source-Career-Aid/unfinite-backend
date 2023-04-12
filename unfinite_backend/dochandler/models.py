@@ -9,11 +9,11 @@ openai.api_key = settings.OPENAI_API_KEY
 devstr = '' if settings.IS_PRODUCTION else 'dev-'
 
 # 0 = user, 1 = assistant
-messages = [(0, "You are an expert summarizer and teacher."), (0, "Please summarize the following texts into a short and coherent answer to the question. Make the answer accessible, break it down into points and keep paragraphs short where you can."),
-            (0, """Instructions: 
+messages = [[0, "You are an expert summarizer and teacher."], [0, "Please summarize the following texts into a short and coherent answer to the question. Make the answer accessible, break it down into points and keep paragraphs short where you can."],
+            [0, """Instructions: 
 	1. Structure the answer into multiple paragraphs where necessary.
     2. When the answer is a list of things, always produce a list, not paragraph.
-    3. Highlight the answer to the query in the text between ``````.""")]
+    3. Highlight the answer to the query in the text between ``````."""]]
 
 def openai_to_pinecone(embedding, document_id):
     page = embedding['index']
@@ -62,7 +62,7 @@ class Thread(models.Model):
 
     id = models.TextField(primary_key=True, default=uuid.uuid4().hex[:16], editable=False)
     qamodels = models.TextField(default=json.dumps([])) # JSON.dumps of list of qamodel objects
-    promptmessages = models.TextField(default=json.dumps([]), blank=True, null=True) # JSON.dumps of list of prompt messages, e.g. [('user', 'message'), ('assistant', 'message')]
+    promptmessages = models.TextField(default=json.dumps(messages), blank=True, null=True) # JSON.dumps of list of prompt messages, e.g. [('user', 'message'), ('assistant', 'message')]
     user = models.ForeignKey('api.UnfiniteUser', on_delete=models.SET_NULL, null=True)
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField()
@@ -72,7 +72,6 @@ class Thread(models.Model):
         if not self.id:
             self.created = timezone.now()
         self.updated = timezone.now()
-        self.promptmessages = json.dumps(messages)
         return super(Thread, self).save(*args, **kwargs)
     
     def get_qamodels(self):
@@ -91,6 +90,12 @@ class Thread(models.Model):
         qamodels = self.get_qamodels()
         qamodels.append(qamodel)
         self.set_qamodels(qamodels)
+    
+    def add_promptmessage(self, promptmessage):
+        promptmessages = self.get_promptmessages()
+        promptmessages.append(promptmessage)
+        print('this runs')
+        self.set_promptmessages(promptmessages)
 
 # Model - Feedback | Contains - unique id, object id, name of the model that it is connected to, thumbs, feedback text, time stamp, user id.
 class FeedbackModel(models.Model):
