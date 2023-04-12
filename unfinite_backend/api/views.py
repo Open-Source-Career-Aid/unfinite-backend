@@ -557,6 +557,8 @@ def summarize_document(request):
     if len(json.loads(docids)) == 0:
         return JsonResponse({'detail':'no document provided'}, status=400)
 
+    data['user'] = request.user.id
+
     response = requests.post(f'{settings.DOCHANDLER_URL}summarize_document/', headers={'Authorization': settings.QUERYHANDLER_KEY}, json=data)
 
     if response.status_code != 200:

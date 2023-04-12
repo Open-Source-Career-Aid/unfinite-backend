@@ -11,7 +11,7 @@ def openai_to_pinecone(embedding, document_id):
     page = embedding['index']
     vec = embedding['embedding']
 
-    return (f"{devstr}{document_id}-{page}", vec, {'document': str(document_id), 'page': str(page), 'dev': settings.IS_PRODUCTION})
+    return (f"{devstr}{document_id}-{page}", vec, {'document': str(document_id), 'page': str(page), 'dev': not settings.IS_PRODUCTION})
 
 def chunks(iterable, batch_size=100):
     it = iter(iterable)
