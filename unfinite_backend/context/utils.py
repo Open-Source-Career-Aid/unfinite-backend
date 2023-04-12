@@ -6,10 +6,10 @@ from nltk.tokenize import word_tokenize
 import numpy as np
 
 
-def preprocess(text: str) -> List[str]:
+def preprocess(text: str) -> str:
     """Tokenize and preprocess the text"""
     tokens = word_tokenize(text.lower())
-    return [token for token in tokens if token.isalpha()]
+    return "".join([token for token in tokens if token.isalpha()])
 
 
 def get_topics(text: str, num_topics: int = 5) -> List[Tuple[str, float]]:
@@ -29,8 +29,3 @@ def highlight_topics(text: str, num_topics: int = 5) -> str:
     return text
 
 
-def get_topics_view(request, *args, **kwargs):
-    text = request.POST.get('text')
-    num_topics = request.POST.get('num_topics', 5)
-    topics = get_topics(text, int(num_topics))
-    return JsonResponse({'topics': topics})

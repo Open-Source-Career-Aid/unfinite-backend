@@ -1,7 +1,7 @@
 # Create your views here.
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
-from .utils import get_topics, highlight_topics
+from .utils import get_topics, highlight_topics, preprocess
 
 
 def require_internal(func):
@@ -21,19 +21,11 @@ def require_internal(func):
     return wrap
 
 
-@require_internal
 @csrf_exempt
-def get_topics_view(request):
-    text = request.POST.get('text')
-    num_topics = request.POST.get('num_topics', 5)
-    topics = get_topics(text, int(num_topics))
-    return JsonResponse({'topics': topics})
-
-
 @require_internal
-@csrf_exempt
-def highlight_topics_view(request):
+def highlight_topics_view(request, *args, **kwargs):
     text = request.POST.get('text')
-    num_topics = request.POST.get('num_topics', 5)
-    highlighted_text = highlight_topics(text, int(num_topics))
-    return JsonResponse({'highlighted_text': highlighted_text})
+    preprocessed_text = preprocess(text)
+    topics = get_topics(preprocessed_text, 5)
+    highlighted_text = highlight_topics(text, 5)
+    return JsonResponse({'highlighted_text': highlighted_text}, status=200)
