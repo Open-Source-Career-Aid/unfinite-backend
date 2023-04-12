@@ -155,3 +155,34 @@ def summarize_document(request):
     thread.save()
 
     return JsonResponse({'answer': answer}, status=200)
+
+@csrf_exempt
+@require_internal
+def QA_feedback(request):
+
+    d = json.loads(request.body)
+
+    qaid = d.get('qaid')
+    feedback = d.get('feedback')
+    thumbs = d.get('thumbs')
+
+    # load the qa object
+    qa = QA.objects.get(id=qaid)
+
+    # load the feedback model
+    feedbackmodel = qa.feedback
+
+    # update the feedback model
+    feedbackmodel.set_feedback(feedback)
+    feedbackmodel.set_thumbs(thumbs)
+
+    # save the feedback model
+    feedbackmodel.save()
+
+    # update the qa object
+    qa.feedback = feedbackmodel
+
+    # save the qa object
+    qa.save()
+
+    return JsonResponse({'detail':'Feedback successfully recorded.'}, status=200)
