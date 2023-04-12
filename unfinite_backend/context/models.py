@@ -12,9 +12,9 @@ class Topic(models.Model):
     def __str__(self):
         return f"{self.title}  | {self.docids}"
 
+
 class Edge(models.Model):
     is_in_edge = models.BooleanField(default=False)
-    is_out_edge = models.BooleanField(default=False)
     start_node = models.ForeignKey(Topic, related_name='start_node', on_delete=models.CASCADE)
     end_node = models.ForeignKey(Topic, related_name='end_node', on_delete=models.CASCADE)
     docid = models.CharField(max_length=255)
