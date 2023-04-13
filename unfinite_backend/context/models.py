@@ -1,11 +1,13 @@
 from django.db import models
+from django.apps import apps
+from dochandler.models import Document
 
 
 # Create your models here.
 class Topic(models.Model):
     title = models.CharField(max_length=255)
     synonyms = models.CharField(max_length=255)
-    docids = models.CharField(max_length=255)
+    docids = models.ManyToManyField(Document, related_name='docids')
     in_edges = models.ManyToManyField('Edge', related_name='in_edges')
     out_edges = models.ManyToManyField('Edge', related_name='out_edges')
 

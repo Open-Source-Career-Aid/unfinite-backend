@@ -51,4 +51,3 @@ def extract_topics_from_list(texts: List[str], num_topics: int = 5) -> List[List
     except (TypeError, StopIteration) as e:
         print(e)
         return None
-
