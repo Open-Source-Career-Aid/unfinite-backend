@@ -9,7 +9,6 @@ import requests
 
 # enter openai api key here
 
-
 def extractpdf(url):
     """
     A function that extracts text from a PDF file given a URL.
@@ -59,26 +58,7 @@ def clean_pdf_text(pdf_text):
 
 	return pdf_text
 
-def gpt3_3turbo_completion(prompt, summarymodel='gpt-3.5-turbo'):
-
-	messages = [{
-		"role": "user",
-		"content": "You are an expert summarizer."
-	},
-	{
-		"role": "user",
-		"content": "Please summarize the following texts into a detailed and coherent answer to the question."
-	},
-	{
-		"role": "user",
-		"content": """Instructions: 
-	1. Structure the answer into multiple paragraphs where necessary.
-    2. Say "The text doesn't provide the answer to the query" if you don't find the answer in the attached texts. Don't try to give unnecessary answers."""
-	},
-	{
-		"role": "user",
-		"content": prompt
-	}]
+def gpt3_3turbo_completion(messages, summarymodel='gpt-3.5-turbo'):
 
 	temperature = 0.0
 	max_length = 750

@@ -556,8 +556,27 @@ def summarize_document(request):
 
     if len(json.loads(docids)) == 0:
         return JsonResponse({'detail':'no document provided'}, status=400)
+    
+    data['user'] = request.user.id
 
     response = requests.post(f'{settings.DOCHANDLER_URL}summarize_document/', headers={'Authorization': settings.QUERYHANDLER_KEY}, json=data)
+
+    if response.status_code != 200:
+        return JsonResponse(data={'detail': 'QueryHandler returned error'}, status=400)
+
+    return JsonResponse(data=response.json(), status=200)
+
+@requires_authentication
+def QA_feedback(request):
+
+    data = json.loads(request.body)
+
+    qaid = data.get('qaid')
+
+    if qaid is None:
+        return JsonResponse({'detail':'failure'}, status=400)
+
+    response = requests.post(f'{settings.DOCHANDLER_URL}qafeedback/', headers={'Authorization': settings.QUERYHANDLER_KEY}, json=data)
 
     if response.status_code != 200:
         return JsonResponse(data={'detail': 'QueryHandler returned error'}, status=400)

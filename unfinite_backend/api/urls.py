@@ -23,4 +23,5 @@ urlpatterns = [
     path('references/', views.references, name='api-references'),
     path('summarize_document/', views.summarize_document, name='api-summarize-document'),
     path('index_document/', views.embed_document, name='api-embed-document'),
+    path('qafeedback/', views.QA_feedback, name='api-qa-feedback'),
 ]
