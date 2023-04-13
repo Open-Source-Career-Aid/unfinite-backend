@@ -15,7 +15,8 @@ def preprocess(text: str) -> str:
     words = [w for w in tokens if w not in stop_words]
     lem = WordNetLemmatizer()
     lemma_words = [lem.lemmatize(w) for w in words]
-    return " ".join([token for token in lemma_words if token.isalpha()])
+    custom_token = " ".join([token for token in lemma_words if token.isalpha()])
+    return simple_preprocess(custom_token)
 
 
 def get_topics(cleaned_text: str, num_topics: int = 5) -> List[Tuple[str, float]]:
@@ -38,4 +39,16 @@ def highlight_topics(text: str, num_topics: int = 5) -> str:
         text = text.replace(topic[0].split('*')[1], f'<mark>{topic[0].split("*")[1]}</mark>')
     return text
 
+
+def extract_topics_from_list(texts: List[str], num_topics: int = 5) -> List[List[Tuple[str, float]]]:
+    """Extract topics from a list of texts" with generators"""
+    try:
+        if not isinstance(texts, list):
+            raise TypeError("texts must be a list")
+        for text in texts:
+            text = preprocess(text)
+            yield highlight_topics(text, num_topics)
+    except (TypeError, StopIteration) as e:
+        print(e)
+        return None
 
