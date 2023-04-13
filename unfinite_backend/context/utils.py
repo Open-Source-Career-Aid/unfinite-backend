@@ -1,22 +1,32 @@
 from typing import List, Tuple
-from django.http import JsonResponse
 from gensim.models.ldamodel import LdaModel
 from gensim.corpora.dictionary import Dictionary
+from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 import numpy as np
+from gensim.utils import simple_preprocess
+from nltk.stem import WordNetLemmatizer
 
 
 def preprocess(text: str) -> str:
     """Tokenize and preprocess the text"""
     tokens = word_tokenize(text.lower())
-    return "".join([token for token in tokens if token.isalpha()])
+    stop_words = set(stopwords.words('english'))
+    words = [w for w in tokens if w not in stop_words]
+    lem = WordNetLemmatizer()
+    lemma_words = [lem.lemmatize(w) for w in words]
+    return " ".join([token for token in lemma_words if token.isalpha()])
 
 
-def get_topics(text: str, num_topics: int = 5) -> List[Tuple[str, float]]:
+def get_topics(cleaned_text: str, num_topics: int = 5) -> List[Tuple[str, float]]:
     """Extract topics from the text using LDA"""
-    dictionary = Dictionary.load('context/dictionary.dict')
-    lda_model = LdaModel.load('context/model.lda')
-    bow_vector = dictionary.doc2bow(preprocess(text))
+    tokenized_texts = [text.split() for text in cleaned_text]
+    # Create dictionary
+    dictionary = Dictionary(tokenized_texts)
+    corpus = [dictionary.doc2bow(tokens) for tokens in tokenized_texts]
+    # Train LDA model
+    lda_model = LdaModel(corpus=corpus, id2word=dictionary, num_topics=5, passes=10)
+    bow_vector = dictionary.doc2bow(cleaned_text.split())
     topic_weights = lda_model[bow_vector]
     return [(lda_model.print_topic(topic[0]), np.round(topic[1], 3)) for topic in topic_weights]
 
