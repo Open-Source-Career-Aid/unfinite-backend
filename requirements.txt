@@ -19,4 +19,12 @@ tldextract
 nltk
 fake_useragent
 PyPDF2==2.5.0
+<<<<<<< Updated upstream
 pinecone-client
+=======
+pinecone-client
+transformers
+tensorflow
+torch
+pdfminer.six
+>>>>>>> Stashed changes
