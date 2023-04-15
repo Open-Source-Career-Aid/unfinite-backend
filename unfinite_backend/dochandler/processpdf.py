@@ -60,11 +60,11 @@ def clean_pdf_text(pdf_text):
 
 def gpt3_3turbo_completion(messages, summarymodel='gpt-3.5-turbo'):
 
-	temperature = 0.0
+	temperature = 0.2
 	max_length = 750
 	top_p = 1.0
-	frequency_penalty = 0.0
-	presence_penalty = 0.0
+	frequency_penalty = 0.2
+	presence_penalty = 0.1
 
 	# making API request and error checking
 	print("making API request")

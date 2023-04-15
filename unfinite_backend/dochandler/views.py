@@ -144,7 +144,7 @@ def summarize_document(request):
 
     prompt = text + f'QUESTION: {question}'
 
-    # messages.append([0, prompt])
+    messages.append([0, prompt])
 
     def zero_or_one(x):
         if x == 0:
