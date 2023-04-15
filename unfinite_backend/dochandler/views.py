@@ -87,8 +87,6 @@ def matches_to_text(result):
     document_id = int(result['metadata']['document'])
     page_number = int(result['metadata']['page'])
 
-    print(page_number)
-
     try:
         return json.loads(Document.objects.get(id=document_id).document_pages)[page_number]
     except:
@@ -134,8 +132,6 @@ def summarize_document(request):
         include_metadata=True
     )
 
-    print(similar)
-
     text_to_summarize = list(map(matches_to_text, similar['matches']))
 
     text = ""
@@ -153,7 +149,6 @@ def summarize_document(request):
 
     messagestochat = [{'role': zero_or_one(x[0]), 'content': x[1]} for x in messages]
     
-    print(messagestochat)
     answer = gpt3_3turbo_completion(messagestochat)
     # messages.append([1, answer])
 
