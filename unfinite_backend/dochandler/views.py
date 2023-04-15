@@ -89,7 +89,10 @@ def matches_to_text(result):
 
     print(page_number)
 
-    return json.loads(Document.objects.get(id=document_id).document_pages)[page_number]
+    try:
+        return json.loads(Document.objects.get(id=document_id).document_pages)[page_number]
+    except:
+        return ""
 
 @csrf_exempt
 @require_internal
@@ -127,9 +130,11 @@ def summarize_document(request):
             "document": {"$in": list(map(str, json.loads(docids)))},
             "dev": {"$eq": not settings.IS_PRODUCTION},
         },
-        top_k=2,
+        top_k=1,
         include_metadata=True
     )
+
+    print(similar)
 
     text_to_summarize = list(map(matches_to_text, similar['matches']))
 
@@ -139,7 +144,7 @@ def summarize_document(request):
 
     prompt = text + f'QUESTION: {question}'
 
-    messages.append([0, prompt])
+    # messages.append([0, prompt])
 
     def zero_or_one(x):
         if x == 0:
@@ -148,8 +153,9 @@ def summarize_document(request):
 
     messagestochat = [{'role': zero_or_one(x[0]), 'content': x[1]} for x in messages]
     
+    print(messagestochat)
     answer = gpt3_3turbo_completion(messagestochat)
-    messages.append([1, answer])
+    # messages.append([1, answer])
 
     # update the qa object and save it
     qa.docids = docids
@@ -161,7 +167,7 @@ def summarize_document(request):
     # update the thread object and save it
     qaid = qa.id
     thread.add_qamodel(qaid)
-    thread.promptmessages = json.dumps(messages)
+    # thread.promptmessages = json.dumps(messages)
     thread.save()
 
     return JsonResponse({'answer': answer}, status=200)

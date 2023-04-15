@@ -13,7 +13,8 @@ messages = [[0, "You are an expert summarizer and teacher."], [0, "Please summar
             [0, """Instructions: 
 	1. Structure the answer into multiple paragraphs where necessary.
     2. When the answer is a list of things, always produce a list, not paragraph.
-    3. Highlight the answer to the query in the text between ``````."""]]
+    3. Highlight the answer to the query in the text between ``````.
+    4. if the attached text is not relevant, please say you couldn't find the answer."""]]
 
 def openai_to_pinecone(embedding, document_id):
     page = embedding['index']
