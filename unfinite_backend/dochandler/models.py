@@ -12,8 +12,7 @@ devstr = '' if settings.IS_PRODUCTION else 'dev-'
 messages = [[0, "You are an expert summarizer and teacher."], [0, "Please summarize the following texts into a short and coherent answer to the question. Make the answer accessible, break it down into points and keep paragraphs short where you can."],
             [0, """Instructions: 
 	1. Structure the answer into multiple paragraphs where necessary.
-    2. When the answer is a list of things, always produce a list, not paragraph.
-    3. Highlight the answer to the query in the text between ``````."""]]
+    2. If the attached text is not relevant, please say you couldn't find the answer."""]]
 
 def openai_to_pinecone(embedding, document_id):
     page = embedding['index']
@@ -130,6 +129,7 @@ class QA(models.Model):
         question = models.TextField()
         answer = models.TextField()
         docids = models.TextField() # JSON.dumps of list of document ids
+        txttosummarize = models.TextField(default="", blank=True, null=True)
         created = models.DateTimeField()
         thread = models.ForeignKey('Thread', on_delete=models.SET_NULL, null=True)
         feedback = models.ForeignKey('FeedbackModel', on_delete=models.SET_NULL, null=True)
@@ -150,6 +150,9 @@ class QA(models.Model):
         def get_docids(self):
             return json.loads(self.docids)
         
+        def get_txttosummarize(self):
+            return self.txttosummarize
+        
         def set_question(self, question):
             self.question = question
 
@@ -158,3 +161,6 @@ class QA(models.Model):
 
         def set_docids(self, docids):
             self.docids = json.dumps(docids)
+
+        def set_txttosummarize(self, txttosummarize):
+            self.txttosummarize = txttosummarize

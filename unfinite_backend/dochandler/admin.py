@@ -12,4 +12,4 @@ class Thread(admin.ModelAdmin):
 
 @admin.register(QA)
 class QA(admin.ModelAdmin):
-    list_display = ('question', 'answer', 'created', 'feedback',)
+    list_display = ('question', 'answer', 'created', 'feedback', 'txttosummarize')
