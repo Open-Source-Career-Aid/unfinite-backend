@@ -14,8 +14,8 @@ def preprocess(text: str) -> str:
     stop_words = set(stopwords.words('english'))
     words = [w for w in tokens if w not in stop_words]
     lem = WordNetLemmatizer()
-    lemma_words = [lem.lemmatize(w) for w in words]
-    custom_token = " ".join([token for token in lemma_words if token.isalpha()])
+    # lemma_words = [lem.lemmatize(w) for w in words]
+    custom_token = " ".join([token for token in words if token.isalpha()])
     return simple_preprocess(custom_token)
 
 
