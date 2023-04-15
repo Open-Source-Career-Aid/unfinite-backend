@@ -69,7 +69,7 @@ def embed_document(request):
         return JsonResponse({'detail':'Document already embedded', 'document_id': Document.objects.get(url=url).id, 'thread_id':threadid}, status=200)
 
     pdf_text = extractpdf(url)
-    doc = Document.objects.create(url=url, user_id=user_id, document_pages=json.dumps(pdf_text), num_pages=len(pdf_text))
+    doc = Document.objects.create(url=url, user_id=user_id, document_chunks=json.dumps(pdf_text), num_chunks=len(pdf_text))
     doc.save()
     doc.embed(index)
     log_signal.send(sender=None, user_id=user_id, desc="User indexed new document")
@@ -85,11 +85,11 @@ def embed_document(request):
 def matches_to_text(result):
 
     document_id = int(result['metadata']['document'])
-    page_number = int(result['metadata']['page'])
+    chunk_number = int(result['metadata']['page'])
 
     print(page_number)
 
-    return json.loads(Document.objects.get(id=document_id).document_pages)[page_number]
+    return json.loads(Document.objects.get(id=document_id).document_chunks)[chunk_number]
 
 @csrf_exempt
 @require_internal

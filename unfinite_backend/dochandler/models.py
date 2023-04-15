@@ -21,20 +21,20 @@ def openai_to_pinecone(embedding, document_id):
 
     return (f"{devstr}{document_id}-{page}", vec, {'document': str(document_id), 'page': str(page), 'dev': not settings.IS_PRODUCTION})
 
-def chunks(iterable, batch_size=100):
+def batches(iterable, batch_size=100):
     it = iter(iterable)
-    chunk = tuple(itertools.islice(it, batch_size))
+    batch = tuple(itertools.islice(it, batch_size))
 
-    while chunk:
-        yield chunk
-        chunk = tuple(itertools.islice(it, batch_size))
+    while batch:
+        yield batch
+        batch = tuple(itertools.islice(it, batch_size))
 
 # Create your models here.
 class Document(models.Model):
     url = models.URLField(max_length=400, unique=True)
     user = models.ForeignKey('api.UnfiniteUser', on_delete=models.SET_NULL, null=True)
-    document_pages = models.TextField() # JSON.dumps of list of page text
-    num_pages = models.IntegerField()
+    document_chunks = models.TextField() # JSON.dumps of list of page text
+    num_chunks = models.IntegerField()
 
     created = models.DateTimeField()
 
@@ -46,16 +46,16 @@ class Document(models.Model):
 
     def embed(self, index):
 
-        page_texts = json.loads(self.document_pages)
-        response = openai.Embedding.create(input=page_texts,engine='text-embedding-ada-002')
+        chunk_texts = json.loads(self.document_chunks)
+        response = openai.Embedding.create(input=chunk_texts,engine='text-embedding-ada-002')
         embeddings = response['data']
 
         f = lambda x: openai_to_pinecone(x, self.id)
 
         to_upsert = map(f, embeddings)
 
-        for chunk in chunks(to_upsert):
-            print(index.upsert(chunk))
+        for batch in batches(to_upsert):
+            print(index.upsert(batch))
 
 # Model - Thread | Contains - unique id, a list of q/a models, userid foreign key, prompt messages, time stamp.
 class Thread(models.Model):
