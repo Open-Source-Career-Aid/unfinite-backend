@@ -16,6 +16,8 @@ openai.api_key = settings.OPENAI_API_KEY
 pinecone.init(api_key=settings.PINECONE_KEY, environment="us-central1-gcp")
 index = pinecone.Index('unfinite-embeddings')
 
+special_prompts = {1: 'Simplify'}
+
 # a functuon that uses regex to verify that a text is a url
 def is_url(text):
     regex = re.compile(
@@ -103,6 +105,7 @@ def summarize_document(request):
     question = d.get('question')
     docids = d.get('docids') # list of docids to search through
     user_id = d.get('user')
+    special_id = d.get('special_id')
     
     ## vector search here, only through the docids
     ## generate response and return it
@@ -119,29 +122,46 @@ def summarize_document(request):
     # create a new feedback model
     feedback = FeedbackModel.objects.create(qa=qa)
 
-    # TODO: save the question embeddings for future use
-    response = openai.Embedding.create(input=question, engine='text-embedding-ada-002')
-    question_embedding = response['data'][0]['embedding']
+    if special_id != 0:
 
-    similar = index.query(
-        vector=question_embedding,
-        filter={
-            "document": {"$in": list(map(str, json.loads(docids)))},
-            "dev": {"$eq": not settings.IS_PRODUCTION},
-        },
-        top_k=1,
-        include_metadata=True
-    )
+        # simplify the last answer
 
-    text_to_summarize = list(map(matches_to_text, similar['matches']))
+        last_qa = thread.get_qamodels()[-1]
 
-    text = ""
-    for chunk in text_to_summarize:
-        text += chunk+"\n"
+        text = last_qa.txttosummarize
+        last_question = last_qa.question
+        last_answer = last_qa.answer
+        prompt = text + f'QUESTION: {last_question}'
 
-    prompt = text + f'QUESTION: {question}'
+        messages.append([0, prompt])
+        messages.append([1, last_answer])
+        messages.append([0, f"{special_prompts[special_id]}"])
+    
+    else:
 
-    messages.append([0, prompt])
+        # TODO: save the question embeddings for future use
+        response = openai.Embedding.create(input=question, engine='text-embedding-ada-002')
+        question_embedding = response['data'][0]['embedding']
+
+        similar = index.query(
+            vector=question_embedding,
+            filter={
+                "document": {"$in": list(map(str, json.loads(docids)))},
+                "dev": {"$eq": not settings.IS_PRODUCTION},
+            },
+            top_k=1,
+            include_metadata=True
+        )
+
+        text_to_summarize = list(map(matches_to_text, similar['matches']))
+
+        text = ""
+        for chunk in text_to_summarize:
+            text += chunk+"\n"
+
+        prompt = text + f'QUESTION: {question}'
+
+        messages.append([0, prompt])
 
     def zero_or_one(x):
         if x == 0:
