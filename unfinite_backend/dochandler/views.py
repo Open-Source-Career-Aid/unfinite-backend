@@ -11,6 +11,7 @@ from .models import Document, Thread, QA, FeedbackModel
 import re
 import uuid
 from django.conf import settings
+from .pdfChunks import pdftochunks_url
 
 openai.api_key = settings.OPENAI_API_KEY
 pinecone.init(api_key=settings.PINECONE_KEY, environment="us-central1-gcp")
@@ -70,8 +71,9 @@ def embed_document(request):
     if len(Document.objects.filter(url=url)) != 0:
         return JsonResponse({'detail':'Document already embedded', 'document_id': Document.objects.get(url=url).id, 'thread_id':threadid}, status=200)
 
-    pdf_text = extractpdf(url)
+    pdf_text = pdftochunks_url(url) #extractpdf(url)
     doc = Document.objects.create(url=url, user_id=user_id, document_chunks=json.dumps(pdf_text), num_chunks=len(pdf_text))
+    print(pdf_text)
     doc.save()
     doc.embed(index)
     log_signal.send(sender=None, user_id=user_id, desc="User indexed new document")
@@ -87,18 +89,12 @@ def embed_document(request):
 def matches_to_text(result):
 
     document_id = int(result['metadata']['document'])
-    chunk_number = int(result['metadata']['page'])
+    chunk_number = int(result['metadata']['chunk'])
 
-<<<<<<< HEAD
-    print(page_number)
-
-    return json.loads(Document.objects.get(id=document_id).document_chunks)[chunk_number]
-=======
     try:
-        return json.loads(Document.objects.get(id=document_id).document_pages)[page_number]
+        return json.loads(Document.objects.get(id=document_id).document_chunks)[chunk_number]
     except:
         return ""
->>>>>>> 74cf4a9e2e00ca56b44cc2df0f93fb621e1d70c3
 
 @csrf_exempt
 @require_internal
@@ -122,17 +118,18 @@ def summarize_document(request):
     # load the messages
     messages = thread.get_promptmessages()
 
+    associated_qas = sorted(list(QA.objects.filter(thread=thread)), key = lambda x: x.index)
+
     # create a new QA object
-    qa = QA.objects.create(thread=thread, question=question)
+    qa = QA.objects.create(thread=thread, question=question, index=len(associated_qas))
 
     # create a new feedback model
     feedback = FeedbackModel.objects.create(qa=qa)
 
-    if special_id != 0:
+    if special_id:
 
         # simplify the last answer
-
-        last_qa = thread.get_qamodels()[-1]
+        last_qa = associated_qas[-1]
 
         text = last_qa.txttosummarize
         last_question = last_qa.question
@@ -155,9 +152,11 @@ def summarize_document(request):
                 "document": {"$in": list(map(str, json.loads(docids)))},
                 "dev": {"$eq": not settings.IS_PRODUCTION},
             },
-            top_k=1,
+            top_k=5,
             include_metadata=True
         )
+
+        print(similar)
 
         text_to_summarize = list(map(matches_to_text, similar['matches']))
 
@@ -188,8 +187,8 @@ def summarize_document(request):
     qa.save()
 
     # update the thread object and save it
-    qaid = qa.id
-    thread.add_qamodel(qaid)
+    #qaid = qa.id
+    #thread.add_qamodel(qaid)
     # thread.promptmessages = json.dumps(messages)
     thread.save()
 

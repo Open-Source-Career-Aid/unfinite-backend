@@ -18,7 +18,7 @@ def openai_to_pinecone(embedding, document_id):
     page = embedding['index']
     vec = embedding['embedding']
 
-    return (f"{devstr}{document_id}-{page}", vec, {'document': str(document_id), 'page': str(page), 'dev': not settings.IS_PRODUCTION})
+    return (f"{devstr}{document_id}-{page}", vec, {'document': str(document_id), 'chunk': str(page), 'dev': not settings.IS_PRODUCTION})
 
 def batches(iterable, batch_size=100):
     it = iter(iterable)
@@ -134,6 +134,7 @@ class QA(models.Model):
         thread = models.ForeignKey('Thread', on_delete=models.SET_NULL, null=True)
         feedback = models.ForeignKey('FeedbackModel', on_delete=models.SET_NULL, null=True)
         user = models.ForeignKey('api.UnfiniteUser', on_delete=models.SET_NULL, null=True)
+        index = models.IntegerField()
     
         def save(self, *args, **kwargs):
             ''' On save, update timestamps '''

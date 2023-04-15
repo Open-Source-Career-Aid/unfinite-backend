@@ -5,7 +5,7 @@ from pdfminer.pdfdocument import PDFDocument
 from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
 from pdfminer.pdfpage import PDFPage
 from pdfminer.pdfparser import PDFParser
-import string
+import string, io, requests, re
 
 def preprocess(listoflines):
 
@@ -65,11 +65,35 @@ def extract_text_from_pdf(pdf_path):
 
     if text:
         return text
+
+def extract_text_from_pdf_url(pdf_url):
+    output_string = StringIO()
+
+    response = requests.get(pdf_url)
+    in_file = io.BytesIO(response.content)
+
+    parser = PDFParser(in_file)
+    doc = PDFDocument(parser)
+    rsrcmgr = PDFResourceManager()
+    device = TextConverter(rsrcmgr, output_string, laparams=LAParams())
+
+    interpreter = PDFPageInterpreter(rsrcmgr, device)
+    for page in PDFPage.create_pages(doc):
+        interpreter.process_page(page)
+
+    text = output_string.getvalue()
+
+    # close open handles
+    device.close()
+    output_string.close()
+
+    if text:
+        return text
     
 def make_chunks(listoflines):
     
-    minlen = 64
-    maxwords = 128
+    minlen = 128
+    maxwords = 256
 
     chunks = []
     
@@ -130,6 +154,15 @@ def make_chunks(listoflines):
 def pdftochunks(pdf_path):
     
     text = extract_text_from_pdf(pdf_path)
+    listoflines = text.split('\n\n')
+    listoflines = preprocess(listoflines)
+    chunks = make_chunks(listoflines)
+    
+    return chunks
+
+def pdftochunks_url(pdf_url):
+    
+    text = extract_text_from_pdf_url(pdf_url)
     listoflines = text.split('\n\n')
     listoflines = preprocess(listoflines)
     chunks = make_chunks(listoflines)
