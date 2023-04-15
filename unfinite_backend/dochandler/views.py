@@ -162,6 +162,7 @@ def summarize_document(request):
     qa.user_id = user_id
     qa.feedback = feedback
     qa.answer = answer
+    qa.txttosummarize = text
     qa.save()
 
     # update the thread object and save it

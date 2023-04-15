@@ -129,6 +129,7 @@ class QA(models.Model):
         question = models.TextField()
         answer = models.TextField()
         docids = models.TextField() # JSON.dumps of list of document ids
+        txttosummarize = models.TextField(default="", blank=True, null=True)
         created = models.DateTimeField()
         thread = models.ForeignKey('Thread', on_delete=models.SET_NULL, null=True)
         feedback = models.ForeignKey('FeedbackModel', on_delete=models.SET_NULL, null=True)
@@ -149,6 +150,9 @@ class QA(models.Model):
         def get_docids(self):
             return json.loads(self.docids)
         
+        def get_txttosummarize(self):
+            return self.txttosummarize
+        
         def set_question(self, question):
             self.question = question
 
@@ -157,3 +161,6 @@ class QA(models.Model):
 
         def set_docids(self, docids):
             self.docids = json.dumps(docids)
+
+        def set_txttosummarize(self, txttosummarize):
+            self.txttosummarize = txttosummarize
