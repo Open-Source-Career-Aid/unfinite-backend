@@ -94,6 +94,7 @@ def matches_to_text(result):
 
 @csrf_exempt
 @require_internal
+# TODO: change the name from summarize_document to something that makes more sense, e.g. answer_question
 def summarize_document(request):
 
     d = json.loads(request.body)
