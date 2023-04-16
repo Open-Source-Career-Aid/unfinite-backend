@@ -1,29 +1,41 @@
 import requests
+import pandas as pd
 from bs4 import BeautifulSoup
 from requests import HTTPError
 from selenium import webdriver
 import csv
-import pandas as p
 import arxivscraper as ax
 import courlan as cl
 import time
 import re
 from fake_useragent import UserAgent
-
-#
+from datetime import datetime
 # cs_subtopics = "cs.AI",
-
 # scraper = arxivscraper.Scraper(category='physics:cond-mat', date_from='2017-05-27',date_until='2017-06-07')
-# scraper = ax.Scraper(category='stat',date_from='2017-08-01',date_until='2017-08-10',t=10, filters={'categories':['stat.ml'],'abstract':['learning']})
-# output = scraper.scrape()
-#
-# cols = ('id', 'title', 'categories', 'abstract', 'doi', 'created', 'updated', 'authors')
-# df = pd.DataFrame(output,columns=cols)
-# print(df)
 
 
+def arxiv_scrape(category, subtopics):
+    try:
+        for t in subtopics:
+            scraper = ax.Scraper(category=category,date_from='2020-05-27',date_until=datetime.now().strftime("%Y-%m-%d"), t=10, filters={'categories':[t],'abstract':['learning']})
+            output = scraper.scrape()
+            cols = ('id', 'title', 'categories', 'abstract', 'doi', 'created', 'updated', 'authors', 'affiliation')
+            try:
+                df = pd.DataFrame(output,columns=cols)
+                # create url column
+                df["pdf_url"] = df["id"].apply(lambda x: "https://arxiv.org/pdf/" + x + ".pdf")
+                # saves the data to a csv file, but ideally we save it to a database
+                df.to_csv(f'{t}.csv', index=True, header=True)
+                print(df.head())
+            except ValueError as e:
+                print("Error: ", e)
+                continue
+    except HTTPError as e:
+        print("Error: ", e)
+        return
 
-def research_topic():
+
+def new_research_submissions():
     # Get the topic from the user
     """ This is a niave approach to the problem.
     I will be using the brute force to scrape the arxiv website.
@@ -52,7 +64,7 @@ def research_topic():
                     all_resp = requests.get(all_entries, headers=headers)
                     try:
                         if all_resp.status_code == 200:
-                            # doing things with all entries
+                            # doing things with all recent entries for past week
                             print("Success for all entries")
                             def add_root_url(url):
                                 if url.startswith("http"):
@@ -88,4 +100,7 @@ def research_topic():
 
 
 if __name__ == "__main__":
-    research_topic()
+    # run the scraper on python 3.9 or below
+    scrape_category = "cs"
+    stopics = ["cs.AI", "cmp-lg", "stat.ml"]
+    arxiv_scrape(scrape_category, stopics)

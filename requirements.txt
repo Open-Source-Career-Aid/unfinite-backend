@@ -95,3 +95,5 @@ flatbuffers~=23.3.3
 filelock~=3.10.7
 tokenizers~=0.13.3
 wsproto~=1.2.0
+pandas
+arxivscraper
