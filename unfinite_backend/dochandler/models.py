@@ -100,7 +100,7 @@ class Thread(models.Model):
 class FeedbackModel(models.Model):
 
     id = models.AutoField(primary_key=True)
-    thumbs = models.IntegerField(default=0) # 0 = neutral, 1 = up, -1 = down
+    thumbs = models.IntegerField(default=0) # 0 = neutral, 1 = up, 2 = down
     textfeedback = models.TextField(default="", blank=True, null=True)
     created = models.DateTimeField()
 

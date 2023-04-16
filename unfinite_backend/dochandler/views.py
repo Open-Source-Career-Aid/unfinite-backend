@@ -151,37 +151,40 @@ def summarize_document(request):
         # based on the query decide whether to summarize the whole document or perform a dedicated vector search
         modus_operandi = get_modus_operandi(question)
 
-        if modus_operandi == 'The answer requires all the pages to be summarized':
+        if modus_operandi != 'The answer is very specific':
+            
             # TODO: summarize the top 5 chunks closest to the averate embedding of the whole document
             return JsonResponse({'answer': 'SUMMARY WILL BE PRODUCED HERE <3'}, status=200)
-        elif modus_operandi == 'The answer is very specific':
-            # TODO: save the question embeddings for future use
-            response = openai.Embedding.create(input=question, engine='text-embedding-ada-002')
-            question_embedding = response['data'][0]['embedding']
+        
 
-            similar = index.query(
-                vector=question_embedding,
-                filter={
-                    "document": {"$in": list(map(str, json.loads(docids)))},
-                    "dev": {"$eq": not settings.IS_PRODUCTION},
-                },
-                top_k=5,
-                include_metadata=True
-            )
+        # elif modus_operandi == 'The answer is very specific':
+        # TODO: save the question embeddings for future use
+        response = openai.Embedding.create(input=question, engine='text-embedding-ada-002')
+        question_embedding = response['data'][0]['embedding']
 
-            # print(similar)
+        similar = index.query(
+            vector=question_embedding,
+            filter={
+                "document": {"$in": list(map(str, json.loads(docids)))},
+                "dev": {"$eq": not settings.IS_PRODUCTION},
+            },
+            top_k=5,
+            include_metadata=True
+        )
 
-            text_to_summarize = list(map(matches_to_text, similar['matches']))
+        # print(similar)
 
-            text = ""
-            for chunk in text_to_summarize:
-                text += chunk+"\n"
+        text_to_summarize = list(map(matches_to_text, similar['matches']))
 
-            prompt = text + f'QUESTION: {question}'
+        text = ""
+        for chunk in text_to_summarize:
+            text += chunk+"\n"
 
-            print(prompt)
+        prompt = text + f'QUESTION: {question}'
 
-            messages.append([0, prompt])
+        print(prompt)
+
+        messages.append([0, prompt])
 
     def zero_or_one(x):
         if x == 0:

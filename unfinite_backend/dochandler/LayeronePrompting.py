@@ -3,7 +3,7 @@ import numpy as np
 
 model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
 
-options = ['The answer requires all the pages to be summarized', 'The answer is very specific']
+options = ['The answer requires all the pages to be summarized', 'The answer is specific', 'The answer is vague']
 def similarity(v1, v2):  # return dot product of two vectors
     return np.dot(v1, v2)
 
@@ -20,6 +20,11 @@ def get_modus_operandi(query):
     # print all the options along with their similarity
     for option, similarity_ in zip(options, similarities):
         print(option, similarity_)
+
+    # if options[np.argmax(similarities)] is 'The answer is vague', return 'The answer is very specific' if the difference between the highest and the second highest similarity is less than 20%
+    if options[np.argmax(similarities)] == 'The answer is vague':
+        if similarities[np.argmax(similarities)] - similarities[np.argsort(similarities)[-2]] < 0.035:
+            return 'The answer is very specific'
 
     # return the option with the highest similarity
     return options[np.argmax(similarities)]
@@ -39,8 +44,8 @@ def get_modus_operandi(query):
 #         # return the result
 #         pass
 
-# if __name__ == '__main__':
+if __name__ == '__main__':
 
-#     while True:
-#         query = input('Enter your query: ')
-#         print(get_modus_operandi(query))
+    while True:
+        query = input('Enter your query: ')
+        print(get_modus_operandi(query))
