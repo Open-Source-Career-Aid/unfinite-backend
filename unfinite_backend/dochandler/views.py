@@ -73,7 +73,7 @@ def embed_document(request):
 
     pdf_text = pdftochunks_url(url) #extractpdf(url)
     doc = Document.objects.create(url=url, user_id=user_id, document_chunks=json.dumps(pdf_text), num_chunks=len(pdf_text))
-    print(pdf_text)
+    # print(pdf_text)
     doc.save()
     doc.embed(index)
     log_signal.send(sender=None, user_id=user_id, desc="User indexed new document")
@@ -88,8 +88,13 @@ def embed_document(request):
 
 def matches_to_text(result):
 
+    # print(result)
     document_id = int(result['metadata']['document'])
-    chunk_number = int(result['metadata']['chunk'])
+    # print(document_id)
+    try:
+        chunk_number = int(result['metadata']['chunk'])
+    except:
+        return ""
 
     try:
         return json.loads(Document.objects.get(id=document_id).document_chunks)[chunk_number]
@@ -156,7 +161,7 @@ def summarize_document(request):
             include_metadata=True
         )
 
-        print(similar)
+        # print(similar)
 
         text_to_summarize = list(map(matches_to_text, similar['matches']))
 
@@ -165,6 +170,8 @@ def summarize_document(request):
             text += chunk+"\n"
 
         prompt = text + f'QUESTION: {question}'
+
+        print(prompt)
 
         messages.append([0, prompt])
 

@@ -92,8 +92,8 @@ def extract_text_from_pdf_url(pdf_url):
     
 def make_chunks(listoflines):
     
-    minlen = 128
-    maxwords = 256
+    minlen = 64
+    maxwords = 128
 
     chunks = []
     
@@ -105,22 +105,22 @@ def make_chunks(listoflines):
 
         line = listoflines[i]
 
-        # if the reference section is reached, break the loop
-        if line.lower().startswith('references'):
-            if nextchunk != '':
-                chunks.append(nextchunk)
-                nextchunk = ''
-            return chunks
+#         # if the reference section is reached, break the loop
+#         if line.lower().startswith('references'):
+#             if nextchunk != '':
+#                 chunks.append(nextchunk)
+#                 nextchunk = ''
+#             return chunks
         
         if line.startswith('<h>::'):
 
             # if the next chunk starts with 'references', and then the next line is a number, 1. or 1), or 1-1, or [1], then just break the loop
-            if line.lower().startswith('references'):
-                if nextchunk != '':
-                    if len(nextchunk) > minlen:
-                        chunks.append(nextchunk)
-                        nextchunk = ''
-                return chunks
+#             if line.lower().startswith('references'):
+#                 if nextchunk != '':
+#                     if len(nextchunk) > minlen:
+#                         chunks.append(nextchunk)
+#                         nextchunk = ''
+#                 return chunks
             
             # if the next chunk is not empty, and the last line was not a header, then add the next chunk to the list of chunks
             if nextchunk != '' and not lastlinewashead:
@@ -137,8 +137,15 @@ def make_chunks(listoflines):
             continue
 
         else:
-
-            if len(nextchunk.split(' ')) > maxwords*1.1: # 10% tolerance
+            
+            if len(nextchunk.split(' ')) > maxwords*2.5:
+                for i in range(0, len(nextchunk.split(' ')), maxwords):
+                    if i+maxwords>len(nextchunk.split(' ')):
+                        chunks.append(' '.join(nextchunk.split(' ')[i:]))
+                    else:
+                        chunks.append(' '.join(nextchunk.split(' ')[i:i+maxwords]))
+                nextchunk = ''
+            elif len(nextchunk.split(' ')) > maxwords*1.1: # 10% tolerance
                 chunks.append(nextchunk)
                 nextchunk = ''
 
