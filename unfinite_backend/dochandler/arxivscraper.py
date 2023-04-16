@@ -17,7 +17,7 @@ from datetime import datetime
 def arxiv_scrape(category, subtopics):
     try:
         for t in subtopics:
-            scraper = ax.Scraper(category=category,date_from='2020-05-27',date_until=datetime.now().strftime("%Y-%m-%d"), t=10, filters={'categories':[t],'abstract':['learning']})
+            scraper = ax.Scraper(category=category,date_from='2020-01-01',date_until=datetime.now().strftime("%Y-%m-%d"), t=10, filters={'categories':[t],'abstract':['learning']})
             output = scraper.scrape()
             cols = ('id', 'title', 'categories', 'abstract', 'doi', 'created', 'updated', 'authors', 'affiliation')
             try:
