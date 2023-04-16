@@ -102,5 +102,5 @@ def new_research_submissions():
 if __name__ == "__main__":
     # run the scraper on python 3.9 or below
     scrape_category = "cs"
-    stopics = ["cs.AI", "cmp-lg", "stat.ml"]
+    stopics = ["cs.AI", "cmp-lg", "stat.ML"]
     arxiv_scrape(scrape_category, stopics)
