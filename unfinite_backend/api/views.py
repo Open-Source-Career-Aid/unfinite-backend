@@ -582,3 +582,13 @@ def QA_feedback(request):
         return JsonResponse(data={'detail': 'QueryHandler returned error'}, status=400)
 
     return JsonResponse(data=response.json(), status=200)
+
+@requires_authentication
+def get_total_documents_indexed(request):
+
+    response = requests.get(f'{settings.DOCHANDLER_URL}get_total_documents_indexed/', headers={'Authorization': settings.QUERYHANDLER_KEY})
+
+    if response.status_code != 200:
+        return JsonResponse(data={'detail': 'QueryHandler returned error'}, status=400)
+
+    return JsonResponse(data=response.json(), status=200)

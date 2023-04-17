@@ -4,7 +4,7 @@ from .models import Document, Thread, QA, FeedbackModel
 # Register your models here.
 @admin.register(Document)
 class Document(admin.ModelAdmin):
-    list_display = ('url', 'num_pages', 'created', 'user',)
+    list_display = ('url', 'num_chunks', 'created', 'user',)
 
 @admin.register(Thread)
 class Thread(admin.ModelAdmin):
@@ -12,4 +12,4 @@ class Thread(admin.ModelAdmin):
 
 @admin.register(QA)
 class QA(admin.ModelAdmin):
-    list_display = ('question', 'answer', 'created', 'feedback',)
+    list_display = ('question', 'answer', 'created', 'feedback', 'txttosummarize')

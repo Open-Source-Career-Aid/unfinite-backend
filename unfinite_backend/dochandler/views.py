@@ -11,10 +11,14 @@ from .models import Document, Thread, QA, FeedbackModel
 import re
 import uuid
 from django.conf import settings
+from .pdfChunks import pdftochunks_url
+from .LayeronePrompting import *
 
 openai.api_key = settings.OPENAI_API_KEY
 pinecone.init(api_key=settings.PINECONE_KEY, environment="us-central1-gcp")
 index = pinecone.Index('unfinite-embeddings')
+
+special_prompts = {1: 'Simplify'}
 
 # a functuon that uses regex to verify that a text is a url
 def is_url(text):
@@ -68,8 +72,9 @@ def embed_document(request):
     if len(Document.objects.filter(url=url)) != 0:
         return JsonResponse({'detail':'Document already embedded', 'document_id': Document.objects.get(url=url).id, 'thread_id':threadid}, status=200)
 
-    pdf_text = extractpdf(url)
-    doc = Document.objects.create(url=url, user_id=user_id, document_pages=json.dumps(pdf_text), num_pages=len(pdf_text))
+    pdf_text = pdftochunks_url(url) #extractpdf(url)
+    doc = Document.objects.create(url=url, user_id=user_id, document_chunks=json.dumps(pdf_text), num_chunks=len(pdf_text))
+    # print(pdf_text)
     doc.save()
     doc.embed(index)
     log_signal.send(sender=None, user_id=user_id, desc="User indexed new document")
@@ -84,15 +89,22 @@ def embed_document(request):
 
 def matches_to_text(result):
 
+    # print(result)
     document_id = int(result['metadata']['document'])
-    page_number = int(result['metadata']['page'])
+    # print(document_id)
+    try:
+        chunk_number = int(result['metadata']['chunk'])
+    except:
+        return ""
 
-    print(page_number)
-
-    return json.loads(Document.objects.get(id=document_id).document_pages)[page_number]
+    try:
+        return json.loads(Document.objects.get(id=document_id).document_chunks)[chunk_number]
+    except:
+        return ""
 
 @csrf_exempt
 @require_internal
+# TODO: change the name from summarize_document to something that makes more sense, e.g. answer_question
 def summarize_document(request):
 
     d = json.loads(request.body)
@@ -101,6 +113,7 @@ def summarize_document(request):
     question = d.get('question')
     docids = d.get('docids') # list of docids to search through
     user_id = d.get('user')
+    special_id = d.get('special_id')
     
     ## vector search here, only through the docids
     ## generate response and return it
@@ -111,35 +124,125 @@ def summarize_document(request):
     # load the messages
     messages = thread.get_promptmessages()
 
+    associated_qas = sorted(list(QA.objects.filter(thread=thread)), key = lambda x: x.index)
+
     # create a new QA object
-    qa = QA.objects.create(thread=thread, question=question)
+    qa = QA.objects.create(thread=thread, question=question, index=len(associated_qas))
 
     # create a new feedback model
     feedback = FeedbackModel.objects.create(qa=qa)
 
-    # TODO: save the question embeddings for future use
-    response = openai.Embedding.create(input=question, engine='text-embedding-ada-002')
-    question_embedding = response['data'][0]['embedding']
+    if special_id:
 
-    similar = index.query(
-        vector=question_embedding,
-        filter={
-            "document": {"$in": list(map(str, json.loads(docids)))},
-            "dev": {"$eq": not settings.IS_PRODUCTION},
-        },
-        top_k=2,
-        include_metadata=True
-    )
+        # simplify the last answer
+        last_qa = associated_qas[-1]
 
-    text_to_summarize = list(map(matches_to_text, similar['matches']))
+        text = last_qa.txttosummarize
+        last_question = last_qa.question
+        last_answer = last_qa.answer
+        prompt = text + f'QUESTION: {last_question}'
 
-    text = ""
-    for chunk in text_to_summarize:
-        text += chunk+"\n"
+        messages.append([0, prompt])
+        messages.append([1, last_answer])
+        messages.append([0, f"{special_prompts[special_id]}"])
+    
+    else:
 
-    prompt = text + f'QUESTION: {question}'
+        # based on the query decide whether to summarize the whole document or perform a dedicated vector search
+        modus_operandi = get_modus_operandi(question)
 
-    messages.append([0, prompt])
+        if modus_operandi != 'The answer is very specific':
+
+            all_chunks = index.query(
+                vector=[0 for x in range(1536)],
+                filter={
+                    "document": {"$in": list(map(str, json.loads(docids)))},
+                    "dev": {"$eq": not settings.IS_PRODUCTION},
+                },
+                include_values=True,
+                top_k=500
+            )
+            average_embedding = np.mean([v['values'] for v in all_chunks['matches']], axis=0)
+
+            similar = index.query(
+                vector=list(average_embedding),
+                filter={
+                    "document": {"$in": list(map(str, json.loads(docids)))},
+                    "dev": {"$eq": not settings.IS_PRODUCTION},
+                },
+                include_metadata=True,
+                top_k=5
+            )
+
+            # the following code should be abstracted. since it's written twice. I wasn't sure if   
+            # there was a reason for organizing it this way, so I left it how it was.
+            
+            text_to_summarize = list(map(matches_to_text, similar['matches']))
+
+            text = ""
+            for chunk in text_to_summarize:
+                text += chunk+"\n"
+
+            prompt = text + f'QUESTION: {question}'
+
+            print(prompt)
+
+            messages.append([0, prompt])
+
+            def zero_or_one(x):
+                if x == 0:
+                    return "user"
+                return "assistant"
+
+            messagestochat = [{'role': zero_or_one(x[0]), 'content': x[1]} for x in messages]
+            
+            answer = gpt3_3turbo_completion(messagestochat)
+            # messages.append([1, answer])
+
+            # update the qa object and save it
+            qa.docids = docids
+            qa.user_id = user_id
+            qa.feedback = feedback
+            qa.answer = answer
+            qa.txttosummarize = text
+            qa.save()
+
+            # update the thread object and save it
+            #qaid = qa.id
+            #thread.add_qamodel(qaid)
+            # thread.promptmessages = json.dumps(messages)
+            thread.save()
+
+            return JsonResponse({'answer': answer}, status=200)
+        
+        # elif modus_operandi == 'The answer is very specific':
+        # TODO: save the question embeddings for future use
+        response = openai.Embedding.create(input=question, engine='text-embedding-ada-002')
+        question_embedding = response['data'][0]['embedding']
+
+        similar = index.query(
+            vector=question_embedding,
+            filter={
+                "document": {"$in": list(map(str, json.loads(docids)))},
+                "dev": {"$eq": not settings.IS_PRODUCTION},
+            },
+            top_k=5,
+            include_metadata=True
+        )
+
+        # print(similar)
+
+        text_to_summarize = list(map(matches_to_text, similar['matches']))
+
+        text = ""
+        for chunk in text_to_summarize:
+            text += chunk+"\n"
+
+        prompt = text + f'QUESTION: {question}'
+
+        #print(prompt)
+
+        messages.append([0, prompt])
 
     def zero_or_one(x):
         if x == 0:
@@ -149,19 +252,20 @@ def summarize_document(request):
     messagestochat = [{'role': zero_or_one(x[0]), 'content': x[1]} for x in messages]
     
     answer = gpt3_3turbo_completion(messagestochat)
-    messages.append([1, answer])
+    # messages.append([1, answer])
 
     # update the qa object and save it
     qa.docids = docids
     qa.user_id = user_id
     qa.feedback = feedback
     qa.answer = answer
+    qa.txttosummarize = text
     qa.save()
 
     # update the thread object and save it
-    qaid = qa.id
-    thread.add_qamodel(qaid)
-    thread.promptmessages = json.dumps(messages)
+    #qaid = qa.id
+    #thread.add_qamodel(qaid)
+    # thread.promptmessages = json.dumps(messages)
     thread.save()
 
     return JsonResponse({'answer': answer}, status=200)
@@ -196,3 +300,8 @@ def QA_feedback(request):
     qa.save()
 
     return JsonResponse({'detail':'Feedback successfully recorded.'}, status=200)
+
+@csrf_exempt
+@require_internal
+def get_total_documents_indexed(request):
+    return JsonResponse({'detail':Document.objects.all().count()}, status=200)

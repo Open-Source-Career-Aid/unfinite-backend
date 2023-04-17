@@ -12,29 +12,28 @@ devstr = '' if settings.IS_PRODUCTION else 'dev-'
 messages = [[0, "You are an expert summarizer and teacher."], [0, "Please summarize the following texts into a short and coherent answer to the question. Make the answer accessible, break it down into points and keep paragraphs short where you can."],
             [0, """Instructions: 
 	1. Structure the answer into multiple paragraphs where necessary.
-    2. When the answer is a list of things, always produce a list, not paragraph.
-    3. Highlight the answer to the query in the text between ``````."""]]
+    2. If the attached text is not relevant, please say you couldn't find the answer."""]]
 
 def openai_to_pinecone(embedding, document_id):
     page = embedding['index']
     vec = embedding['embedding']
 
-    return (f"{devstr}{document_id}-{page}", vec, {'document': str(document_id), 'page': str(page), 'dev': not settings.IS_PRODUCTION})
+    return (f"{devstr}{document_id}-{page}", vec, {'document': str(document_id), 'chunk': str(page), 'dev': not settings.IS_PRODUCTION})
 
-def chunks(iterable, batch_size=100):
+def batches(iterable, batch_size=100):
     it = iter(iterable)
-    chunk = tuple(itertools.islice(it, batch_size))
+    batch = tuple(itertools.islice(it, batch_size))
 
-    while chunk:
-        yield chunk
-        chunk = tuple(itertools.islice(it, batch_size))
+    while batch:
+        yield batch
+        batch = tuple(itertools.islice(it, batch_size))
 
 # Create your models here.
 class Document(models.Model):
     url = models.URLField(max_length=400, unique=True)
     user = models.ForeignKey('api.UnfiniteUser', on_delete=models.SET_NULL, null=True)
-    document_pages = models.TextField() # JSON.dumps of list of page text
-    num_pages = models.IntegerField()
+    document_chunks = models.TextField() # JSON.dumps of list of page text
+    num_chunks = models.IntegerField()
 
     created = models.DateTimeField()
 
@@ -46,16 +45,16 @@ class Document(models.Model):
 
     def embed(self, index):
 
-        page_texts = json.loads(self.document_pages)
-        response = openai.Embedding.create(input=page_texts,engine='text-embedding-ada-002')
+        chunk_texts = json.loads(self.document_chunks)
+        response = openai.Embedding.create(input=chunk_texts,engine='text-embedding-ada-002')
         embeddings = response['data']
 
         f = lambda x: openai_to_pinecone(x, self.id)
 
         to_upsert = map(f, embeddings)
 
-        for chunk in chunks(to_upsert):
-            print(index.upsert(chunk))
+        for batch in batches(to_upsert):
+            print(index.upsert(batch))
 
 # Model - Thread | Contains - unique id, a list of q/a models, userid foreign key, prompt messages, time stamp.
 class Thread(models.Model):
@@ -101,7 +100,7 @@ class Thread(models.Model):
 class FeedbackModel(models.Model):
 
     id = models.AutoField(primary_key=True)
-    thumbs = models.IntegerField(default=0) # 0 = neutral, 1 = up, -1 = down
+    thumbs = models.IntegerField(default=0) # 0 = neutral, 1 = up, 2 = down
     textfeedback = models.TextField(default="", blank=True, null=True)
     created = models.DateTimeField()
 
@@ -130,10 +129,12 @@ class QA(models.Model):
         question = models.TextField()
         answer = models.TextField()
         docids = models.TextField() # JSON.dumps of list of document ids
+        txttosummarize = models.TextField(default="", blank=True, null=True)
         created = models.DateTimeField()
         thread = models.ForeignKey('Thread', on_delete=models.SET_NULL, null=True)
         feedback = models.ForeignKey('FeedbackModel', on_delete=models.SET_NULL, null=True)
         user = models.ForeignKey('api.UnfiniteUser', on_delete=models.SET_NULL, null=True)
+        index = models.IntegerField()
     
         def save(self, *args, **kwargs):
             ''' On save, update timestamps '''
@@ -150,6 +151,9 @@ class QA(models.Model):
         def get_docids(self):
             return json.loads(self.docids)
         
+        def get_txttosummarize(self):
+            return self.txttosummarize
+        
         def set_question(self, question):
             self.question = question
 
@@ -158,3 +162,6 @@ class QA(models.Model):
 
         def set_docids(self, docids):
             self.docids = json.dumps(docids)
+
+        def set_txttosummarize(self, txttosummarize):
+            self.txttosummarize = txttosummarize
