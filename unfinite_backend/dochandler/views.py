@@ -152,11 +152,69 @@ def summarize_document(request):
         modus_operandi = get_modus_operandi(question)
 
         if modus_operandi != 'The answer is very specific':
-            
-            # TODO: summarize the top 5 chunks closest to the averate embedding of the whole document
-            return JsonResponse({'answer': 'SUMMARY WILL BE PRODUCED HERE <3'}, status=200)
-        
 
+            all_chunks = index.query(
+                vector=[0 for x in range(1536)],
+                filter={
+                    "document": {"$in": list(map(str, json.loads(docids)))},
+                    "dev": {"$eq": not settings.IS_PRODUCTION},
+                },
+                include_values=True,
+                top_k=500
+            )
+            average_embedding = np.mean([v['values'] for v in all_chunks['matches']], axis=0)
+
+            similar = index.query(
+                vector=list(average_embedding),
+                filter={
+                    "document": {"$in": list(map(str, json.loads(docids)))},
+                    "dev": {"$eq": not settings.IS_PRODUCTION},
+                },
+                include_metadata=True,
+                top_k=5
+            )
+
+            # the following code should be abstracted. since it's written twice. I wasn't sure if   
+            # there was a reason for organizing it this way, so I left it how it was.
+            
+            text_to_summarize = list(map(matches_to_text, similar['matches']))
+
+            text = ""
+            for chunk in text_to_summarize:
+                text += chunk+"\n"
+
+            prompt = text + f'QUESTION: {question}'
+
+            print(prompt)
+
+            messages.append([0, prompt])
+
+            def zero_or_one(x):
+                if x == 0:
+                    return "user"
+                return "assistant"
+
+            messagestochat = [{'role': zero_or_one(x[0]), 'content': x[1]} for x in messages]
+            
+            answer = gpt3_3turbo_completion(messagestochat)
+            # messages.append([1, answer])
+
+            # update the qa object and save it
+            qa.docids = docids
+            qa.user_id = user_id
+            qa.feedback = feedback
+            qa.answer = answer
+            qa.txttosummarize = text
+            qa.save()
+
+            # update the thread object and save it
+            #qaid = qa.id
+            #thread.add_qamodel(qaid)
+            # thread.promptmessages = json.dumps(messages)
+            thread.save()
+
+            return JsonResponse({'answer': answer}, status=200)
+        
         # elif modus_operandi == 'The answer is very specific':
         # TODO: save the question embeddings for future use
         response = openai.Embedding.create(input=question, engine='text-embedding-ada-002')
@@ -182,7 +240,7 @@ def summarize_document(request):
 
         prompt = text + f'QUESTION: {question}'
 
-        print(prompt)
+        #print(prompt)
 
         messages.append([0, prompt])
 

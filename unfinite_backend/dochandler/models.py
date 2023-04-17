@@ -59,7 +59,7 @@ class Document(models.Model):
 # Model - Thread | Contains - unique id, a list of q/a models, userid foreign key, prompt messages, time stamp.
 class Thread(models.Model):
 
-    id = models.TextField(primary_key=True, default=uuid.uuid4().hex[:16], editable=False)
+    id = models.CharField(primary_key=True, default=uuid.uuid4().hex[:16], editable=False, max_length=16)
     qamodels = models.TextField(default=json.dumps([])) # JSON.dumps of list of qamodel objects
     promptmessages = models.TextField(default=json.dumps(messages), blank=True, null=True) # JSON.dumps of list of prompt messages, e.g. [('user', 'message'), ('assistant', 'message')]
     user = models.ForeignKey('api.UnfiniteUser', on_delete=models.SET_NULL, null=True)
