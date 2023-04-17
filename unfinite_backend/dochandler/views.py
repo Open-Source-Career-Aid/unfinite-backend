@@ -300,3 +300,8 @@ def QA_feedback(request):
     qa.save()
 
     return JsonResponse({'detail':'Feedback successfully recorded.'}, status=200)
+
+@csrf_exempt
+@require_internal
+def get_total_documents_indexed(request):
+    return JsonResponse({'detail':Document.objects.all().count()}, status=200)
