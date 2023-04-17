@@ -24,5 +24,6 @@ transformers
 tensorflow
 torch
 pdfminer.six
+sentence-transformers
 pandas
 arxivscraper

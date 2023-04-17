@@ -5,7 +5,7 @@ from pdfminer.pdfdocument import PDFDocument
 from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
 from pdfminer.pdfpage import PDFPage
 from pdfminer.pdfparser import PDFParser
-import string
+import string, io, requests, re
 
 def preprocess(listoflines):
 
@@ -65,6 +65,30 @@ def extract_text_from_pdf(pdf_path):
 
     if text:
         return text
+
+def extract_text_from_pdf_url(pdf_url):
+    output_string = StringIO()
+
+    response = requests.get(pdf_url)
+    in_file = io.BytesIO(response.content)
+
+    parser = PDFParser(in_file)
+    doc = PDFDocument(parser)
+    rsrcmgr = PDFResourceManager()
+    device = TextConverter(rsrcmgr, output_string, laparams=LAParams())
+
+    interpreter = PDFPageInterpreter(rsrcmgr, device)
+    for page in PDFPage.create_pages(doc):
+        interpreter.process_page(page)
+
+    text = output_string.getvalue()
+
+    # close open handles
+    device.close()
+    output_string.close()
+
+    if text:
+        return text
     
 def make_chunks(listoflines):
     
@@ -81,22 +105,22 @@ def make_chunks(listoflines):
 
         line = listoflines[i]
 
-        # if the reference section is reached, break the loop
-        if line.lower().startswith('references'):
-            if nextchunk != '':
-                chunks.append(nextchunk)
-                nextchunk = ''
-            return chunks
+#         # if the reference section is reached, break the loop
+#         if line.lower().startswith('references'):
+#             if nextchunk != '':
+#                 chunks.append(nextchunk)
+#                 nextchunk = ''
+#             return chunks
         
         if line.startswith('<h>::'):
 
             # if the next chunk starts with 'references', and then the next line is a number, 1. or 1), or 1-1, or [1], then just break the loop
-            if line.lower().startswith('references'):
-                if nextchunk != '':
-                    if len(nextchunk) > minlen:
-                        chunks.append(nextchunk)
-                        nextchunk = ''
-                return chunks
+#             if line.lower().startswith('references'):
+#                 if nextchunk != '':
+#                     if len(nextchunk) > minlen:
+#                         chunks.append(nextchunk)
+#                         nextchunk = ''
+#                 return chunks
             
             # if the next chunk is not empty, and the last line was not a header, then add the next chunk to the list of chunks
             if nextchunk != '' and not lastlinewashead:
@@ -113,8 +137,15 @@ def make_chunks(listoflines):
             continue
 
         else:
-
-            if len(nextchunk.split(' ')) > maxwords*1.1: # 10% tolerance
+            
+            if len(nextchunk.split(' ')) > maxwords*2.5:
+                for i in range(0, len(nextchunk.split(' ')), maxwords):
+                    if i+maxwords>len(nextchunk.split(' ')):
+                        chunks.append(' '.join(nextchunk.split(' ')[i:]))
+                    else:
+                        chunks.append(' '.join(nextchunk.split(' ')[i:i+maxwords]))
+                nextchunk = ''
+            elif len(nextchunk.split(' ')) > maxwords*1.1: # 10% tolerance
                 chunks.append(nextchunk)
                 nextchunk = ''
 
@@ -130,6 +161,15 @@ def make_chunks(listoflines):
 def pdftochunks(pdf_path):
     
     text = extract_text_from_pdf(pdf_path)
+    listoflines = text.split('\n\n')
+    listoflines = preprocess(listoflines)
+    chunks = make_chunks(listoflines)
+    
+    return chunks
+
+def pdftochunks_url(pdf_url):
+    
+    text = extract_text_from_pdf_url(pdf_url)
     listoflines = text.split('\n\n')
     listoflines = preprocess(listoflines)
     chunks = make_chunks(listoflines)
