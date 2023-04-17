@@ -25,6 +25,11 @@ def get_modus_operandi(query):
     if options[np.argmax(similarities)] == 'The answer is vague':
         if similarities[np.argmax(similarities)] - similarities[np.argsort(similarities)[-2]] < 0.035:
             return 'The answer is very specific'
+    
+    # if options[np.argmax(similarities)] is 'The answer requires all the pages to be summarized', return 'The answer is very specific' if the difference between the highest and the second highest similarity is less than 20%
+    if options[np.argmax(similarities)] == 'The answer requires all the pages to be summarized':
+        if similarities[np.argmax(similarities)] - similarities[np.argsort(similarities)[-2]] < 0.035:
+            return 'The answer is very specific'
 
     # return the option with the highest similarity
     return options[np.argmax(similarities)]
@@ -44,8 +49,8 @@ def get_modus_operandi(query):
 #         # return the result
 #         pass
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
 
-    while True:
-        query = input('Enter your query: ')
-        print(get_modus_operandi(query))
+#     while True:
+#         query = input('Enter your query: ')
+#         print(get_modus_operandi(query))
