@@ -3,6 +3,7 @@ from django.utils import timezone
 import json, itertools, openai
 import uuid
 from .processpdf import gpt3_embedding
+from .pdfChunks import pdftochunks_url
 from django.conf import settings
 
 openai.api_key = settings.OPENAI_API_KEY
@@ -32,8 +33,11 @@ def batches(iterable, batch_size=100):
 class Document(models.Model):
     url = models.URLField(max_length=400, unique=True)
     user = models.ForeignKey('api.UnfiniteUser', on_delete=models.SET_NULL, null=True)
-    document_chunks = models.TextField() # JSON.dumps of list of page text
-    num_chunks = models.IntegerField()
+    document_chunks = models.TextField(null=True) # JSON.dumps of list of page text
+    num_chunks = models.IntegerField(null=True)
+    embedded = models.BooleanField(default=False)
+    title = models.TextField(null=True)
+
 
     created = models.DateTimeField()
 
@@ -54,7 +58,15 @@ class Document(models.Model):
         to_upsert = map(f, embeddings)
 
         for batch in batches(to_upsert):
-            print(index.upsert(batch))
+            index.upsert(batch)
+
+        self.embedded = True
+
+    def scrape(self):
+        chunks = pdftochunks_url(self.url)
+        self.document_chunks = json.dumps(chunks)
+        self.num_chunks = len(chunks)
+        self.save()
 
 # Model - Thread | Contains - unique id, a list of q/a models, userid foreign key, prompt messages, time stamp.
 class Thread(models.Model):
