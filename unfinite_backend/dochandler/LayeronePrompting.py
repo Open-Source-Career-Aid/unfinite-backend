@@ -53,8 +53,8 @@ def get_modus_operandi(query):
 #         # return the result
 #         pass
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
 
-    while True:
-        query = input('Enter your query: ')
-        print(get_modus_operandi(query))
+#     while True:
+#         query = input('Enter your query: ')
+#         print(get_modus_operandi(query))
