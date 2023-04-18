@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Document, Thread, QA, FeedbackModel
+from .models import Document, Thread, QA, FeedbackModel, QuestionEventLog
 
 # Register your models here.
 @admin.register(Document)
@@ -13,3 +13,7 @@ class Thread(admin.ModelAdmin):
 @admin.register(QA)
 class QA(admin.ModelAdmin):
     list_display = ('question', 'answer', 'created', 'feedback', 'txttosummarize')
+
+@admin.register(QuestionEventLog)
+class QuestionEventLog(admin.ModelAdmin):
+    list_display = ('user', 'event_type', 'event_message', 'event_time')
