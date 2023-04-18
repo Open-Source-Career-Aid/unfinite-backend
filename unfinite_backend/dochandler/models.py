@@ -122,9 +122,22 @@ class FeedbackModel(models.Model):
     def set_feedback(self, feedback):
         self.feedback = feedback
 
+
+class QuestionEventLog(models.Model):
+    user = models.ForeignKey('api.UnfiniteUser', on_delete=models.SET_NULL, null=True)
+    event_time = models.DateTimeField(auto_now_add=True)
+    event_type = models.CharField(max_length=100)
+    event_message = models.TextField()
+
+    def __repr__(self):
+        return f"<EventLog: {self.event_type}>"
+
+    def __str__(self):
+        return f'{self.user.email} {self.event_message} {self.event_time.strftime("%Y-%m-%d %H:%M:%S")}'
+
+
 # Model - QAModel | Contains - unique id, question, answer, document ids list, time stamp, feedback.
 class QA(models.Model):
-        
         id = models.AutoField(primary_key=True)
         question = models.TextField()
         answer = models.TextField()
@@ -135,15 +148,29 @@ class QA(models.Model):
         feedback = models.ForeignKey('FeedbackModel', on_delete=models.SET_NULL, null=True)
         user = models.ForeignKey('api.UnfiniteUser', on_delete=models.SET_NULL, null=True)
         index = models.IntegerField()
-    
+
         def save(self, *args, **kwargs):
             ''' On save, update timestamps '''
             if not self.id:
                 self.created = timezone.now()
+            if self.user:
+                self.create_event_log(
+                    "question_created",
+                    f"Question '{self.question}' created by {self.user}"
+                )
             return super(QA, self).save(*args, **kwargs)
-        
+
         def get_question(self):
             return self.question
+
+        def create_event_log(self, event_type, event_message):
+            event_log = QuestionEventLog(
+                user=self.user,
+                event_type=event_type,
+                event_message=event_message
+            )
+            event_log.save()
+
         
         def get_answer(self):
             return self.answer
