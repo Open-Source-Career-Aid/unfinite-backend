@@ -592,3 +592,23 @@ def get_total_documents_indexed(request):
         return JsonResponse(data={'detail': 'QueryHandler returned error'}, status=400)
 
     return JsonResponse(data=response.json(), status=200)
+
+@require_POST
+@requires_authentication
+def search_google_scholar(request):
+
+    data = json.loads(request.body)
+
+    query = data.get('query')
+
+    if query is None:
+        return JsonResponse({'detail':'failure'}, status=400)
+    elif query.strip() == '':
+        return JsonResponse({'detail':'failure'}, status=400)
+
+    response = requests.post(f'{settings.DOCHANDLER_URL}searchgooglescholar/', headers={'Authorization': settings.QUERYHANDLER_KEY}, json=data)
+
+    if response.status_code != 200:
+        return JsonResponse(data={'detail': 'QueryHandler returned error'}, status=400)
+
+    return JsonResponse(data=response.json(), status=200)
