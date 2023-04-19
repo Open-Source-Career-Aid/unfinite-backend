@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 from requests import HTTPError
 import arxivscraper as ax
 import time
+import re
 from fake_useragent import UserAgent
 from datetime import datetime
 
@@ -129,10 +130,17 @@ def google_scholar_scrape(query, num_result):
                         return link
                     return link.split("pdf")[0] + "pdf"
                 return None
+
+            def title_cleaner(t):
+                pattern = re.compile(r"(\[\w+])+")
+                if pattern.match(t):
+                    return pattern.sub("", t, count=2).strip()
+                return t
+
             if results:
                 for index, result in enumerate(results, start=1):
                     result_map = {}
-                    title = result.find("h3", class_="gs_rt").text
+                    title = title_cleaner(result.find("h3", class_="gs_rt").text)
                     date = "".join(
                         list(filter(lambda x: x.isdigit(), result.find("div", class_="gs_a").text.split("-")[-2].strip())))
                     pdf_link = pdf_link_check(
