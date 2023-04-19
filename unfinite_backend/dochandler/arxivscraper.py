@@ -129,21 +129,23 @@ def google_scholar_scrape(query, num_result):
                         return link
                     return link.split("pdf")[0] + "pdf"
                 return None
-
-            for index, result in enumerate(results, start=1):
-                result_map = {}
-                title = result.find("h3", class_="gs_rt").text
-                date = "".join(
-                    list(filter(lambda x: x.isdigit(), result.find("div", class_="gs_a").text.split("-")[-2].strip())))
-                pdf_link = pdf_link_check(
-                    result.find("div", class_="gs_ggs gs_fl").find("a")["href"] if result.find("div",
-                                                                                               class_="gs_ggs gs_fl") else
-                    result.find("h3", class_="gs_rt").find("a")["href"] if result.find("h3", class_="gs_rt") else None)
-                result_map["title"] = title
-                result_map["year"] = date
-                result_map["pdf_link"] = pdf_link
-                scholar_articles[index] = result_map
-            return scholar_articles
+            if results:
+                for index, result in enumerate(results, start=1):
+                    result_map = {}
+                    title = result.find("h3", class_="gs_rt").text
+                    date = "".join(
+                        list(filter(lambda x: x.isdigit(), result.find("div", class_="gs_a").text.split("-")[-2].strip())))
+                    pdf_link = pdf_link_check(
+                        result.find("div", class_="gs_ggs gs_fl").find("a")["href"] if result.find("div",
+                                                                                                   class_="gs_ggs gs_fl") else
+                        result.find("h3", class_="gs_rt").find("a")["href"] if result.find("h3", class_="gs_rt") else None)
+                    result_map["title"] = title
+                    result_map["year"] = date
+                    result_map["pdf_link"] = pdf_link
+                    scholar_articles[index] = result_map
+                return scholar_articles
+            print("No results found for the query: ", query)
+            return None
     except HTTPError as e:
         print("Error: ", e)
         return None
@@ -153,5 +155,5 @@ if __name__ == "__main__":
     # run the scraper on python 3.9 or below
     scrape_category = "cs"
     stopics = ["cs.AI", "cmp-lg", "stat.ML"]
-    arxiv_scrape(scrape_category, stopics)
+    # arxiv_scrape(scrape_category, stopics)
     print(google_scholar_scrape("Josephus", 4))
