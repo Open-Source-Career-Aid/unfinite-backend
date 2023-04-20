@@ -12,7 +12,7 @@ import re
 import uuid
 from django.conf import settings
 from .pdfChunks import pdftochunks_url
-from .LayeronePrompting import *
+#from .LayeronePrompting import *
 from .arxivscraper import *
 
 openai.api_key = settings.OPENAI_API_KEY
