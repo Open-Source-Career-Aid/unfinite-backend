@@ -7,7 +7,7 @@ import time
 import re
 from fake_useragent import UserAgent
 from datetime import datetime
-
+import urllib, urllib.request
 
 # cs_subtopics = "cs.AI",
 # scraper = arxivscraper.Scraper(category='physics:cond-mat', date_from='2017-05-27',date_until='2017-06-07')
@@ -158,6 +158,26 @@ def google_scholar_scrape(query, num_result):
         print("Error: ", e)
         return None
 
+def arxiv_search(query, num_results=4):
+    arxiv_articles = {}
+    query = query.replace(" ", "+")
+    url = f'http://export.arxiv.org/api/query?search_query=all:{query}&start=0&max_results={num_results}'
+    data = urllib.request.urlopen(url)
+    # print(data.read().decode('utf-8'))
+    data = data.read().decode('utf-8')
+    soup = BeautifulSoup(data, 'xml')
+    i = 0
+    for entry in soup.find_all('entry'):
+        i+=1
+        result = {}
+        # print(entry.title.text)
+        result['title'] = entry.title.text
+        # find <link href="http://arxiv.org/pdf/2212.09611v1" rel="related" title="pdf" type="application/pdf"/> under entry
+        # print(entry.find('link', {'title': 'pdf'})['href'])
+        result['pdf_link'] = entry.find('link', {'title': 'pdf'})['href']
+        arxiv_articles[i] = result
+    
+    return arxiv_articles
 
 # if __name__ == "__main__":
     # # run the scraper on python 3.9 or below
@@ -165,6 +185,7 @@ def google_scholar_scrape(query, num_result):
     # stopics = ["cs.AI", "cmp-lg", "stat.ML"]
     # # arxiv_scrape(scrape_category, stopics)
     # print(google_scholar_scrape("prompt engineering", 4))
+    # arxiv_search("prompt engineering", 4)
 
     # example output
     # {1: {'title': 'Cataloging Prompt Patterns to Enhance the Discipline of Prompt Engineering', 'year': '', 'pdf_link': 'http://www.dre.vanderbilt.edu/~schmidt/PDF/ADA_Europe_Position_Paper.pdf'}, 2: {'title': 'Yes, You Can Make an App Too: A Systematic Study of Prompt Engineering in the Automatic Generation of Mobile Applications from User Queries', 'year': '2022', 'pdf_link': 'https://appinventor.mit.edu/assets/files/Shone_Jasmine_Rachel_RSIFinal.pdf'}, 3: {'title': 'Apractical SURVEY ON ZERO-SHOT PROMPT DESIGN FOR IN-CONTEXT LEARNING', 'year': '2023', 'pdf_link': 'https://www.researchgate.net/profile/Yinheng-Li/publication/369619413_A_PRACTICAL_SURVEY_ON_ZERO-SHOT_PROMPT_DESIGN_FOR_IN-CONTEXT_LEARNING/links/6424b45c315dfb4cceb88c49/A-PRACTICAL-SURVEY-ON-ZERO-SHOT-PROMPT-DESIGN-FOR-IN-CONTEXT-LEARNING.pdf'}, 4: {'title': "Why Johnny can't prompt: how non-AI experts try (and fail) to design LLM prompts", 'year': '2023', 'pdf_link': "https://www.researchgate.net/profile/Qian-Yang-19/publication/368577310_Why_Johnny_Can't_Prompt_How_Non-AI_Experts_Try_and_Fail_to_Design_LLM_Prompts/links/63ef6f3519130a1a4a8938ac/Why-Johnny-Cant-Prompt-How-Non-AI-Experts-Try-and-Fail-to-Design-LLM-Prompts.pdf"}}
