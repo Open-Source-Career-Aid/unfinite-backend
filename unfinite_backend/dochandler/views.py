@@ -12,7 +12,7 @@ import re
 import uuid
 from django.conf import settings
 from .pdfChunks import pdftochunks_url
-from .LayeronePrompting import *
+#from .LayeronePrompting import *
 
 openai.api_key = settings.OPENAI_API_KEY
 pinecone.init(api_key=settings.PINECONE_KEY, environment="us-central1-gcp")
@@ -149,9 +149,9 @@ def summarize_document(request):
     else:
 
         # based on the query decide whether to summarize the whole document or perform a dedicated vector search
-        modus_operandi = get_modus_operandi(question)
+        #modus_operandi = get_modus_operandi(question)
 
-        if modus_operandi != 'The answer is very specific':
+        if False: #modus_operandi != 'The answer is very specific':
 
             all_chunks = index.query(
                 vector=[0 for x in range(1536)],
@@ -240,7 +240,7 @@ def summarize_document(request):
 
         prompt = text + f'QUESTION: {question}'
 
-        #print(prompt)
+        print(prompt)
 
         messages.append([0, prompt])
 
@@ -250,7 +250,7 @@ def summarize_document(request):
         return "assistant"
 
     messagestochat = [{'role': zero_or_one(x[0]), 'content': x[1]} for x in messages]
-    
+    print(messagestochat)
     answer = gpt3_3turbo_completion(messagestochat)
     # messages.append([1, answer])
 
