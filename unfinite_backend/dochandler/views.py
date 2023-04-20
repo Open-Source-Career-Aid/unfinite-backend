@@ -320,8 +320,6 @@ def search_google_scholar(request):
         toreturn.append([results[result]['title'], results[result]['pdf_link']])
 
     return JsonResponse({'detail':json.dumps(toreturn)}, status=200)
-<<<<<<< Updated upstream
-=======
 
 @csrf_exempt
 @require_internal
@@ -378,4 +376,3 @@ def search_unfinite(request):
 
     return JsonResponse({'detail':json.dumps(toreturn)}, status=200)
 
->>>>>>> Stashed changes
