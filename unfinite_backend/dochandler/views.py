@@ -13,6 +13,7 @@ import uuid
 from django.conf import settings
 from .pdfChunks import pdftochunks_url
 #from .LayeronePrompting import *
+from .arxivscraper import *
 
 openai.api_key = settings.OPENAI_API_KEY
 pinecone.init(api_key=settings.PINECONE_KEY, environment="us-central1-gcp")
@@ -305,3 +306,17 @@ def QA_feedback(request):
 @require_internal
 def get_total_documents_indexed(request):
     return JsonResponse({'detail':Document.objects.all().count()}, status=200)
+
+@csrf_exempt
+@require_internal
+def search_google_scholar(request):
+    d = json.loads(request.body)
+    query = d.get('query')
+
+    results = google_scholar_scrape(query, num_result=4)
+
+    toreturn = []
+    for result in results:
+        toreturn.append([results[result]['title'], results[result]['pdf_link']])
+
+    return JsonResponse({'detail':json.dumps(toreturn)}, status=200)
