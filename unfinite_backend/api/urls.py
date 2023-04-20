@@ -25,4 +25,5 @@ urlpatterns = [
     path('index_document/', views.embed_document, name='api-embed-document'),
     path('qafeedback/', views.QA_feedback, name='api-qa-feedback'),
     path('totaldocuments/', views.get_total_documents_indexed, name='api-total-documents'),
+    path('searchgooglescholar/', views.search_google_scholar, name='api-search-google-scholar'),
 ]
