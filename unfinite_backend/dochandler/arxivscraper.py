@@ -174,7 +174,7 @@ def arxiv_search(query, num_results=4):
         result['title'] = entry.title.text
         # find <link href="http://arxiv.org/pdf/2212.09611v1" rel="related" title="pdf" type="application/pdf"/> under entry
         # print(entry.find('link', {'title': 'pdf'})['href'])
-        result['pdf_link'] = entry.find('link', {'title': 'pdf'})['href']
+        result['pdf_link'] = entry.find('link', {'title': 'pdf'})['href']+'.pdf'
         arxiv_articles[i] = result
     
     return arxiv_articles
