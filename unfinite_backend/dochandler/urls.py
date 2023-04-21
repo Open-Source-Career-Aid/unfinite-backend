@@ -8,4 +8,6 @@ urlpatterns = [
     path('qafeedback/', views.QA_feedback, name='qa-feedback'),
     path('totaldocuments/', views.get_total_documents_indexed, name='total-documents'),
     path('searchgooglescholar/', views.search_google_scholar, name='search-google-scholar'),
+    path('searcharxiv/', views.search_arxiv, name='search-arxiv'),
+    path('searchunfinite/', views.search_unfinite, name='search-unfinite'),
 ]

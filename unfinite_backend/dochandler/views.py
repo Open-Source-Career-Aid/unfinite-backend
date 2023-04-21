@@ -115,6 +115,9 @@ def summarize_document(request):
     docids = d.get('docids') # list of docids to search through
     user_id = d.get('user')
     special_id = d.get('special_id')
+
+    if question == "Introduction":
+        question = "Use the abstract, title, and author names to introduce the document and provide 3 follow up questions for the user. Encapsulate each question between curly braces."
     
     ## vector search here, only through the docids
     ## generate response and return it
@@ -320,3 +323,59 @@ def search_google_scholar(request):
         toreturn.append([results[result]['title'], results[result]['pdf_link']])
 
     return JsonResponse({'detail':json.dumps(toreturn)}, status=200)
+
+@csrf_exempt
+@require_internal
+def search_arxiv(request):
+    d = json.loads(request.body)
+    query = d.get('query')
+
+    results = arxiv_search(query)
+
+    toreturn = []
+    for result in results:
+        toreturn.append([results[result]['title'], results[result]['pdf_link']])
+
+    print(toreturn)
+    return JsonResponse({'detail':json.dumps(toreturn)}, status=200)
+
+@csrf_exempt
+@require_internal
+def search_unfinite(request):
+    d = json.loads(request.body)
+    query = d.get('query')
+
+    response = openai.Embedding.create(input=query, engine='text-embedding-ada-002')
+    query_embedding = response['data'][0]['embedding']
+
+    # get top 4 similar documents
+    similar = index.query(
+        vector=query_embedding,
+        filter={
+            "dev": {"$eq": not settings.IS_PRODUCTION},
+        },
+        top_k=50,
+        include_metadata=True
+    )
+
+    def gettitleandurl(result):
+
+        docid = result['metadata']['document']
+
+        doc = Document.objects.get(id=docid)
+
+        return [doc.title, doc.url]
+
+    # print(similar)
+
+    toreturn  = set()
+    for match in similar['matches']:
+        # toreturn.append(gettitleandurl(match))\
+        title, url = gettitleandurl(match)
+        toreturn.add((title, url))
+    
+    toreturn = list(toreturn)
+    toreturn = [list(x) for x in toreturn][:4]
+
+    return JsonResponse({'detail':json.dumps(toreturn)}, status=200)
+
