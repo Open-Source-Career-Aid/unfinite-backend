@@ -115,6 +115,9 @@ def summarize_document(request):
     docids = d.get('docids') # list of docids to search through
     user_id = d.get('user')
     special_id = d.get('special_id')
+
+    if question == "Introduction":
+        question = "Use the abstract, title, and author names to introduce the document and provide 3 follow up questions for the user. Encapsulate each question between curly braces."
     
     ## vector search here, only through the docids
     ## generate response and return it
