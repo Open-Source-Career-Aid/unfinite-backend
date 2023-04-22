@@ -31,7 +31,7 @@ def batches(iterable, batch_size=100):
 
 # Create your models here.
 class Document(models.Model):
-    url = models.URLField(max_length=400, unique=True)
+    url = models.URLField(max_length=400, unique=True, null=True)
     user = models.ForeignKey('api.UnfiniteUser', on_delete=models.SET_NULL, null=True)
     document_chunks = models.TextField(null=True) # JSON.dumps of list of page text
     num_chunks = models.IntegerField(null=True)
@@ -61,6 +61,7 @@ class Document(models.Model):
             index.upsert(batch)
 
         self.embedded = True
+        self.save()
 
     def scrape(self):
         chunks = pdftochunks_url(self.url)
