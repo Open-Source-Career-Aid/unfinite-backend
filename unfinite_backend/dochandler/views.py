@@ -255,7 +255,12 @@ def summarize_document(request):
 
     messagestochat = [{'role': zero_or_one(x[0]), 'content': x[1]} for x in messages]
     print(messagestochat)
-    answer = gpt3_3turbo_completion(messagestochat)
+    if json.loads(docids)[0] == 458:
+        answer = gpt3_3turbo_completion(messagestochat, summarymodel="gpt-4")
+        print("did summarization with gpt-4")
+    else:
+        answer = gpt3_3turbo_completion(messagestochat)
+        
     # messages.append([1, answer])
 
     # update the qa object and save it
