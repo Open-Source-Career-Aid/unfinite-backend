@@ -118,6 +118,8 @@ def summarize_document(request):
 
     if question == "Introduction":
         question = "Use the abstract, title, and author names to introduce the document and provide 3 follow up questions for the user. Encapsulate each question between curly braces."
+    else:
+        question = f'{question}, and highlight the top three keyphrases between quotes.'
     
     ## vector search here, only through the docids
     ## generate response and return it
