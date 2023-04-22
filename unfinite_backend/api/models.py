@@ -44,6 +44,7 @@ class UnfiniteUser(AbstractUser):
     is_staff = models.BooleanField(default=False)
     is_learner = models.BooleanField(default=False)
     is_beta = models.BooleanField(default=False)
+    is_fm = models.BooleanField(default=False)
     register_date = models.DateField(auto_now=True)
 
     #in_progress = models.ManyToManyField('Query')
