@@ -10,19 +10,25 @@ index = pinecone.Index('unfinite-embeddings')
 
 class Command(BaseCommand):
     def handle(self, **options):
-        # now do the things that you want with your models here
-        limit = 2
-
         csv_fname = input("Filename (with extension):\n-> ")
-        df = pandas.read_csv(csv_fname)
-
-        for row in df.head(limit).itertuples():
+        df = pandas.read_csv(csv_fname).iloc[::-1]
+        limit = int(input("Number of documents to index (starting from top of CSV):\n-> "))
+        done = 0
+        for row in df.itertuples():
+            if done >= limit: break
             try:
-                Document.objects.get(url=row[10])
+                Document.objects.get(url=row[-1])
                 print(f"'{row[3]}' already indexed")
             except Exception:
                 print(f"indexing '{row[3]}'")
-                d = Document.objects.create(url=row[10], title=row[3])
+                d = Document.objects.create(url=row[-1], title=row[3])
                 d.save()
-                d.scrape()
-                d.embed(index)
+                try: 
+                    d.scrape()
+                except Exception:
+                    continue
+                try:
+                    d.embed(index)
+                    done += 1
+                except Exception:
+                    print("Tried to embed too long of a chunk")
