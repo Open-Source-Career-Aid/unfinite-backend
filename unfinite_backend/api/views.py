@@ -21,6 +21,17 @@ def requires_authentication(func):
 
     return wrap
 
+def requires_fm(func):
+
+    def wrap(request):
+
+        if not request.user.is_jm:
+            return JsonResponse({'detail': 'Unauthenticated.'}, status=400)
+
+        return func(request)
+    
+    return wrap
+
 def is_authenticated(request):
     if request.user.is_authenticated:
         return JsonResponse({'is_authenticated': True}, status=200)
@@ -567,6 +578,7 @@ def summarize_document(request):
     return JsonResponse(data=response.json(), status=200)
 
 @requires_authentication
+@requires_fm
 def summarize_document_fm_global(request):
 
     data = json.loads(request.body)
