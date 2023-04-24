@@ -20,7 +20,7 @@ openai.api_key = settings.OPENAI_API_KEY
 pinecone.init(api_key=settings.PINECONE_KEY, environment="us-central1-gcp")
 index = pinecone.Index('unfinite-embeddings')
 
-special_prompts = {1: 'Simplify'}
+special_prompts = {1: 'Simplify for someone who isn\'t knowledgeable in the field', 2: 'Dumbsplain for a 5 year old kid', 3: 'Talk extremely technical as you would to an academic'}
 
 # a functuon that uses regex to verify that a text is a url
 def is_url(text):
@@ -290,7 +290,12 @@ def summarize_document(request):
 
     messagestochat = [{'role': zero_or_one(x[0]), 'content': x[1]} for x in messages]
     print(messagestochat)
-    answer = gpt3_3turbo_completion(messagestochat)
+    if json.loads(docids)[0] == 458:
+        answer = gpt3_3turbo_completion(messagestochat, summarymodel="gpt-4")
+        print("did summarization with gpt-4")
+    else:
+        answer = gpt3_3turbo_completion(messagestochat)
+        
     # messages.append([1, answer])
 
     # update the qa object and save it

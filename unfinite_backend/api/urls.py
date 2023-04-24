@@ -28,4 +28,5 @@ urlpatterns = [
     path('searchgooglescholar/', views.search_google_scholar, name='api-search-google-scholar'),
     path('searcharxiv/', views.search_arxiv, name='api-search-arxiv'),
     path('searchunfinite/', views.search_unfinite, name='api-search-unfinite'),
+    path('preview/', views.summarize_document_fm_global, name='api-summarize-doc-fm-global'),
 ]

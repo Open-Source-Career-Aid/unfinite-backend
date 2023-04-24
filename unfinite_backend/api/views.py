@@ -21,6 +21,17 @@ def requires_authentication(func):
 
     return wrap
 
+def requires_fm(func):
+
+    def wrap(request):
+
+        if not request.user.is_jm:
+            return JsonResponse({'detail': 'Unauthenticated.'}, status=400)
+
+        return func(request)
+    
+    return wrap
+
 def is_authenticated(request):
     if request.user.is_authenticated:
         return JsonResponse({'is_authenticated': True}, status=200)
@@ -573,6 +584,29 @@ def summarize_document(request):
     if len(json.loads(docids)) == 0:
         return JsonResponse({'detail':'no document provided'}, status=400)
     
+    data['user'] = request.user.id
+
+    response = requests.post(f'{settings.DOCHANDLER_URL}summarize_document/', headers={'Authorization': settings.QUERYHANDLER_KEY}, json=data)
+
+    if response.status_code != 200:
+        return JsonResponse(data={'detail': 'QueryHandler returned error'}, status=400)
+
+    return JsonResponse(data=response.json(), status=200)
+
+@requires_authentication
+@requires_fm
+def summarize_document_fm_global(request):
+
+    data = json.loads(request.body)
+
+    question = data.get('question')
+    data['docids'] = json.dumps([458]) 
+
+    if question is None:
+        return JsonResponse({'detail':'failure'}, status=400)
+    elif question.strip() == '':
+        return JsonResponse({'detail':'failure'}, status=400)
+
     data['user'] = request.user.id
 
     response = requests.post(f'{settings.DOCHANDLER_URL}summarize_document/', headers={'Authorization': settings.QUERYHANDLER_KEY}, json=data)
