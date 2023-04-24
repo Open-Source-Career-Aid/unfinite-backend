@@ -80,6 +80,10 @@ def embed_document(request):
             if pdf_text is not None:
                 print(pdf_text, "pdf_text", pdf_name)
                 print("file complete", file_handler.file_complete, request.FILES.get('pdf'))
+                if len(Document.objects.filter(url=pdf_name)) != 0:
+                    return JsonResponse(
+                        {'detail': 'Document already embedded', 'document_id': Document.objects.get(url=pdf_name).id,
+                         'thread_id': threadid}, status=200)
                 doc = Document.objects.create(url=pdf_name, user_id=user_id, document_chunks=json.dumps(pdf_text), num_chunks=len(pdf_text))
                 doc.save()
                 doc.embed(index)
