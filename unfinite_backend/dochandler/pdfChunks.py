@@ -68,27 +68,29 @@ def extract_text_from_pdf(pdf_path):
 
 def extract_text_from_pdf_url(pdf_url):
     output_string = StringIO()
+    try:
+        response = requests.get(pdf_url)
+        in_file = io.BytesIO(response.content)
 
-    response = requests.get(pdf_url)
-    in_file = io.BytesIO(response.content)
+        parser = PDFParser(in_file)
+        doc = PDFDocument(parser)
+        rsrcmgr = PDFResourceManager()
+        device = TextConverter(rsrcmgr, output_string, laparams=LAParams())
 
-    parser = PDFParser(in_file)
-    doc = PDFDocument(parser)
-    rsrcmgr = PDFResourceManager()
-    device = TextConverter(rsrcmgr, output_string, laparams=LAParams())
+        interpreter = PDFPageInterpreter(rsrcmgr, device)
+        for page in PDFPage.create_pages(doc):
+            interpreter.process_page(page)
 
-    interpreter = PDFPageInterpreter(rsrcmgr, device)
-    for page in PDFPage.create_pages(doc):
-        interpreter.process_page(page)
+        text = output_string.getvalue()
 
-    text = output_string.getvalue()
+        # close open handles
+        device.close()
+        output_string.close()
 
-    # close open handles
-    device.close()
-    output_string.close()
-
-    if text:
-        return text
+        if text:
+            return text
+    except Exception as e:
+        print("Error: ", e)
     
 def make_chunks(listoflines):
     
@@ -167,11 +169,34 @@ def pdftochunks(pdf_path):
     
     return chunks
 
+
+def pdfdchunks_file(file):
+    output_string = io.StringIO()
+    in_file = io.BytesIO(file.read())
+    parser = PDFParser(in_file)
+    doc = PDFDocument(parser)
+    rsrcmgr = PDFResourceManager()
+    device = TextConverter(rsrcmgr, output_string, laparams=LAParams())
+
+    interpreter = PDFPageInterpreter(rsrcmgr, device)
+    for page in PDFPage.create_pages(doc):
+        interpreter.process_page(page)
+
+    text = output_string.getvalue()
+
+    # close open handles
+    device.close()
+    output_string.close()
+
+    if text:
+        listoflines = text.split('\n\n')
+        listoflines = preprocess(listoflines)
+        chunks = make_chunks(listoflines)
+        return chunks
+
 def pdftochunks_url(pdf_url):
-    
     text = extract_text_from_pdf_url(pdf_url)
     listoflines = text.split('\n\n')
     listoflines = preprocess(listoflines)
     chunks = make_chunks(listoflines)
-    
     return chunks
