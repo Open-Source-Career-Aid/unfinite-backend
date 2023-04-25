@@ -62,22 +62,23 @@ def embed_document(request):
         d = request.POST.dict() # get the data from the request
         file_handler = FileUploadHandler(request.FILES.get('pdf')) # get the file handler
         if file_handler:
-            print(file_handler)
-            user_id = int(d.get('user')) if d.get('user').isnumeric() else None
-            pdf_name = d.get('name')
-            print(type(str(pdf_name)), type(user_id))
-            new_id = uuid.uuid4().hex[:16]
-            while Thread.objects.filter(id=new_id).exists():
-                new_id = uuid.uuid4().hex[:16]
 
-            thread = Thread(id=new_id, user_id=user_id)
-            thread.save()
-            threadid = thread.id
 
             # embed the pdf file
             pdf_text = pdfdchunks_file(request.FILES.get("pdf"))
             # make sure the pdf was embedded and not empty
             if pdf_text is not None:
+                print(file_handler)
+                user_id = int(d.get('user')) if d.get('user').isnumeric() else None
+                pdf_name = d.get('name')
+                print(type(str(pdf_name)), type(user_id))
+                new_id = uuid.uuid4().hex[:16]
+                while Thread.objects.filter(id=new_id).exists():
+                    new_id = uuid.uuid4().hex[:16]
+
+                thread = Thread(id=new_id, user_id=user_id)
+                thread.save()
+                threadid = thread.id
                 print(pdf_text, "pdf_text", pdf_name)
                 print("file complete", file_handler.file_complete, request.FILES.get('pdf'))
                 if len(Document.objects.filter(url=pdf_name)) != 0:
@@ -96,7 +97,7 @@ def embed_document(request):
 
         url = d.get('url').strip()
         user_id = d.get('user') # make sure these exist elsewhere: ../api/views.py
-
+        print(url, "url", user_id, "user_id", "we are here")
         # create a new thread for this request
         new_id = uuid.uuid4().hex[:16]
         while Thread.objects.filter(id=new_id).exists():
@@ -106,11 +107,16 @@ def embed_document(request):
         thread.save()
         threadid = thread.id
 
-        if not is_url(url):
+        if not is_url(url) and not url.endswith('pdf'):
+            print("Invalid URL")
             return JsonResponse({'detail':'Invalid URL'}, status=400)
 
+
         if len(Document.objects.filter(url=url)) != 0:
+            if Document.objects.filter(url=url).first() is None:
+                return JsonResponse({'detail': 'Document does not exist'}, status=400)
             return JsonResponse({'detail':'Document already embedded', 'document_id': Document.objects.get(url=url).id, 'thread_id':threadid}, status=200)
+
 
         pdf_text = pdftochunks_url(url) #extractpdf(url)
         doc = Document.objects.create(url=url, user_id=user_id, document_chunks=json.dumps(pdf_text), num_chunks=len(pdf_text))
@@ -178,7 +184,10 @@ def summarize_document(request):
     if special_id:
 
         # simplify the last answer
-        last_qa = associated_qas[-1]
+        if len(associated_qas) == 0:
+            last_qa = associated_qas
+        else:
+            last_qa = associated_qas[-1]
 
         text = last_qa.txttosummarize
         last_question = last_qa.question
