@@ -114,7 +114,7 @@ def embed_document(request):
 
         if len(Document.objects.filter(url=url)) != 0:
             if Document.objects.filter(url=url).first() is None:
-                return JsonResponse({'detail': 'Document does not exist'}, status=400)
+                return JsonResponse({'detail': 'Document does not exist'}, status=404)
             return JsonResponse({'detail':'Document already embedded', 'document_id': Document.objects.get(url=url).id, 'thread_id':threadid}, status=200)
 
 
