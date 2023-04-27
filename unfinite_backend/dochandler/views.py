@@ -12,6 +12,8 @@ import re
 import uuid
 from django.conf import settings
 from .pdfChunks import pdftochunks_url
+# import kpextraction.py from keyphrasing folder
+from .keyphrasing.kpextraction import *
 #from .LayeronePrompting import *
 from .arxivscraper import *
 
@@ -117,7 +119,7 @@ def summarize_document(request):
     special_id = d.get('special_id')
 
     if question == "Introduction":
-        question = "Use the abstract, title, and author names to introduce the document and provide 3 follow up questions for the user. Encapsulate each question between curly braces."
+        question = "Use the abstract, title, and author names to introduce the document and provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces."
     
     ## vector search here, only through the docids
     ## generate response and return it
@@ -260,6 +262,24 @@ def summarize_document(request):
         print("did summarization with gpt-4")
     else:
         answer = gpt3_3turbo_completion(messagestochat)
+
+    # answercopy = answer
+    # break answer into text and questions, a question is encapsulated between curly braces
+
+    questions = re.findall(r'\{(.*?)\}', answer)
+    questions = ['{'+x+'}' for x in questions]
+
+    # text is now the answer without the questions
+    text = re.sub(r'\{(.*?)\}', '', answer)
+
+    text = match_keyphrases(text)
+
+    answer = text + "\n" + "\n".join(questions)
+
+    # remove unnecessary newlines
+    answer = re.sub(r'\n\n+', '\n\n', answer)
+
+    print('answer', answer)
         
     # messages.append([1, answer])
 
