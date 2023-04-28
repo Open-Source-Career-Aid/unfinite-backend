@@ -97,7 +97,7 @@ def embed_document(request):
 
         url = d.get('url').strip()
         user_id = d.get('user') # make sure these exist elsewhere: ../api/views.py
-        print(url, "url", user_id, "user_id", "we are here")
+
         # create a new thread for this request
         new_id = uuid.uuid4().hex[:16]
         while Thread.objects.filter(id=new_id).exists():
@@ -182,13 +182,8 @@ def summarize_document(request):
     feedback = FeedbackModel.objects.create(qa=qa)
 
     if special_id:
-
         # simplify the last answer
-        if len(associated_qas) == 0:
-            last_qa = associated_qas
-        else:
-            last_qa = associated_qas[-1]
-
+        last_qa = associated_qas[-1]
         text = last_qa.txttosummarize
         last_question = last_qa.question
         last_answer = last_qa.answer
