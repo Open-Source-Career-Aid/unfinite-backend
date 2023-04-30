@@ -14,6 +14,7 @@ from django.conf import settings
 from .pdfChunks import pdftochunks_url
 # import kpextraction.py from keyphrasing folder
 from .keyphrasing.kpextraction import *
+from .outline.pdfoutliner import title_from_pdf
 #from .LayeronePrompting import *
 from .arxivscraper import *
 
@@ -21,7 +22,7 @@ openai.api_key = settings.OPENAI_API_KEY
 pinecone.init(api_key=settings.PINECONE_KEY, environment="us-central1-gcp")
 index = pinecone.Index('unfinite-embeddings')
 
-special_prompts = {1: 'Simplify for someone who isn\'t knowledgeable in the field', 2: 'Dumbsplain for a 5 year old kid', 3: 'Talk extremely technical as you would to an academic'}
+special_prompts = {1: 'Simplify for someone who isn\'t knowledgeable in the field', 2: 'Dumbsplain for a 5 year old kid', 3: 'Talk extremely technical as you would to an academic', 4: 'Use an analogy to answer the question'}
 
 # a functuon that uses regex to verify that a text is a url
 def is_url(text):
@@ -73,15 +74,31 @@ def embed_document(request):
         return JsonResponse({'detail':'Invalid URL'}, status=400)
 
     if len(Document.objects.filter(url=url)) != 0:
-        return JsonResponse({'detail':'Document already embedded', 'document_id': Document.objects.get(url=url).id, 'thread_id':threadid}, status=200)
+
+         # load the document
+        doc = Document.objects.get(url=url)
+
+         # check if the title is already there
+        if doc.title:
+            return JsonResponse({'detail':'Document already embedded', 'document_id': doc.id, 'thread_id':threadid, 'title': doc.title}, status=200)
+        
+        # get the title
+        title = title_from_pdf(url)
+
+        # update the document
+        doc.title = title
+        doc.save()
+
+        return JsonResponse({'detail':'Document already embedded', 'document_id': Document.objects.get(url=url).id, 'thread_id':threadid, 'title': Document.objects.get(url=url).title}, status=200)
 
     pdf_text = pdftochunks_url(url) #extractpdf(url)
-    doc = Document.objects.create(url=url, user_id=user_id, document_chunks=json.dumps(pdf_text), num_chunks=len(pdf_text))
+    title = title_from_pdf(url)
+    doc = Document.objects.create(url=url, user_id=user_id, document_chunks=json.dumps(pdf_text), num_chunks=len(pdf_text), title=title)
     # print(pdf_text)
     doc.save()
     doc.embed(index)
     log_signal.send(sender=None, user_id=user_id, desc="User indexed new document")
-    return JsonResponse({'Detail':'Successfully indexed the document.', 'document_id': doc.id, 'thread_id': threadid}, status=200)
+    return JsonResponse({'Detail':'Successfully indexed the document.', 'document_id': doc.id, 'thread_id': threadid, 'title': title }, status=200)
 
 # def matches_to_text(result):
 
@@ -118,7 +135,10 @@ def summarize_document(request):
     user_id = d.get('user')
     special_id = d.get('special_id')
 
-    if question == "Introduction":
+    is_overview = False
+
+    if question == "Overview":
+        is_overview = True
         question = "Use the abstract, title, and author names to introduce the document and provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces."
     
     ## vector search here, only through the docids
@@ -223,26 +243,32 @@ def summarize_document(request):
         
         # elif modus_operandi == 'The answer is very specific':
         # TODO: save the question embeddings for future use
-        response = openai.Embedding.create(input=question, engine='text-embedding-ada-002')
-        question_embedding = response['data'][0]['embedding']
+        # if is_overview is False
+        if is_overview is False:
+            response = openai.Embedding.create(input=question, engine='text-embedding-ada-002')
+            question_embedding = response['data'][0]['embedding']
 
-        similar = index.query(
-            vector=question_embedding,
-            filter={
-                "document": {"$in": list(map(str, json.loads(docids)))},
-                "dev": {"$eq": not settings.IS_PRODUCTION},
-            },
-            top_k=5,
-            include_metadata=True
-        )
+            similar = index.query(
+                vector=question_embedding,
+                filter={
+                    "document": {"$in": list(map(str, json.loads(docids)))},
+                    "dev": {"$eq": not settings.IS_PRODUCTION},
+                },
+                top_k=5,
+                include_metadata=True
+            )
 
-        # print(similar)
+            # print(similar)
 
-        text_to_summarize = list(map(matches_to_text, similar['matches']))
-
+            text_to_summarize = list(map(matches_to_text, similar['matches']))
+        else:
+            # get the first 2 chunks
+            text_to_summarize = json.loads(Document.objects.get(id=json.loads(docids)[0]).document_chunks)[:2]
+        
         text = ""
         for chunk in text_to_summarize:
             text += chunk+"\n"
+        
 
         prompt = text + f'QUESTION: {question}'
 
@@ -404,3 +430,24 @@ def search_unfinite(request):
 
     return JsonResponse({'detail':json.dumps(toreturn)}, status=200)
 
+@csrf_exempt
+@require_internal
+def get_recommendations(request):
+
+    d = json.loads(request.body)
+    docid = d.get('docid')
+
+    # get the document
+    doc = Document.objects.get(id=docid)
+
+    # get the document's title
+    title = doc.title
+
+    # use google scholar to get the top 5 results
+    results = google_scholar_scrape(title, num_result=5)
+
+    toreturn = []
+    for result in results:
+        toreturn.append([results[result]['title'], results[result]['pdf_link'], results[result]['authors'], results[result]['year'], results[result]['publisher']])
+
+    return JsonResponse({'detail':json.dumps(toreturn)}, status=200)

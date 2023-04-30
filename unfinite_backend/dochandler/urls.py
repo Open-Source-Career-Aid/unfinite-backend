@@ -10,4 +10,5 @@ urlpatterns = [
     path('searchgooglescholar/', views.search_google_scholar, name='search-google-scholar'),
     path('searcharxiv/', views.search_arxiv, name='search-arxiv'),
     path('searchunfinite/', views.search_unfinite, name='search-unfinite'),
+    path('get_recommendations/', views.get_recommendations, name='get-recommendations'),
 ]
