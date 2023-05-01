@@ -705,7 +705,7 @@ def summarize_document_stream(request):
     
     data['user'] = request.user.id
 
-    response = requests.post(f'{settings.DOCHANDLER_URL}summarize_document/', headers={'Authorization': settings.QUERYHANDLER_KEY}, json=data, stream=True)
+    response = requests.post(f'{settings.DOCHANDLER_URL}summarize_document_stream/', headers={'Authorization': settings.QUERYHANDLER_KEY}, json=data, stream=True)
 
     def stream_response(response):
         for chunk in response.iter_content(chunk_size=32):
