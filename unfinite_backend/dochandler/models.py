@@ -160,6 +160,7 @@ class QA(models.Model):
         feedback = models.ForeignKey('FeedbackModel', on_delete=models.SET_NULL, null=True)
         user = models.ForeignKey('api.UnfiniteUser', on_delete=models.SET_NULL, null=True)
         index = models.IntegerField()
+        relevantquestions = models.TextField(default=json.dumps([])) # JSON.dumps of list of relevant questions
 
         def save(self, *args, **kwargs):
             ''' On save, update timestamps '''

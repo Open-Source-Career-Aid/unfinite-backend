@@ -27,3 +27,5 @@ pdfminer.six
 sentence-transformers
 pandas
 arxivscraper
+jellyfish
+PyMuPDF
