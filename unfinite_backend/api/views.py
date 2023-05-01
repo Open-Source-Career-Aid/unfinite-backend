@@ -716,6 +716,6 @@ def summarize_document_stream(request):
     r = StreamingHttpResponse(stream_response(response), content_type='text/event-stream')
 
     # Set any headers that are required for the response
-    r['Content-Disposition'] = f'attachment; filename="{query_id}.json"'
+    r['Content-Disposition'] = f'attachment; filename="{docids[0]}.json"'
 
     return r
