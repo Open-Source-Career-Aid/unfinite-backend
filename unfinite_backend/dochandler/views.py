@@ -303,8 +303,8 @@ def summarize_document(request):
     # remove unnecessary newlines
     answer = re.sub(r'\n\n+', '\n\n', text)
 
-    # remove the last newlines
-    answer = '\n'.join([x for x in answer.split('\n') if x != ''])
+    # remove unnecessary spaces
+    answer = '\n\n'.join([x for x in answer.split('\n') if x != ''])
         
     # messages.append([1, answer])
 
