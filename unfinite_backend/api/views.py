@@ -686,3 +686,36 @@ def search_unfinite(request):
         return JsonResponse(data={'detail': 'QueryHandler returned error'}, status=400)
 
     return JsonResponse(data=response.json(), status=200)
+
+@requires_authentication
+def summarize_document_stream(request):
+
+    data = json.loads(request.body)
+
+    question = data.get('question')
+    docids = data.get('docids') 
+
+    if question is None:
+        return JsonResponse({'detail':'failure'}, status=400)
+    elif question.strip() == '':
+        return JsonResponse({'detail':'failure'}, status=400)
+
+    if len(json.loads(docids)) == 0:
+        return JsonResponse({'detail':'no document provided'}, status=400)
+    
+    data['user'] = request.user.id
+
+    response = requests.post(f'{settings.DOCHANDLER_URL}summarize_document/', headers={'Authorization': settings.QUERYHANDLER_KEY}, json=data, stream=True)
+
+    def stream_response(response):
+        for chunk in response.iter_content(chunk_size=32):
+            if chunk:
+                yield chunk
+
+    # Forward the response as a streaming response
+    r = StreamingHttpResponse(stream_response(response), content_type='text/event-stream')
+
+    # Set any headers that are required for the response
+    r['Content-Disposition'] = f'attachment; filename="{query_id}.json"'
+
+    return r
