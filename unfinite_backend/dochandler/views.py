@@ -22,7 +22,7 @@ openai.api_key = settings.OPENAI_API_KEY
 pinecone.init(api_key=settings.PINECONE_KEY, environment="us-central1-gcp")
 index = pinecone.Index('unfinite-embeddings')
 
-special_prompts = {1: 'Simplify for someone who isn\'t knowledgeable in the field', 2: 'Dumbsplain for a 5 year old kid', 3: 'Talk extremely technical as you would to an academic', 4: 'Use an analogy to answer the question'}
+special_prompts = {1: 'Simplify for someone who isn\'t knowledgeable in the field.\n Provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces.', 2: 'Dumbsplain for a 5 year old kid.\n Provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces.', 3: 'Talk extremely technical as you would to an academic.\n Provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces.', 4: 'Use an analogy to answer the question.\n Provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces.'}
 
 # a functuon that uses regex to verify that a text is a url
 def is_url(text):
