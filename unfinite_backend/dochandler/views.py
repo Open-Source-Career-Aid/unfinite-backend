@@ -270,7 +270,7 @@ def summarize_document(request):
             text += chunk+"\n"
         
 
-        prompt = text + f'QUESTION: {question}'
+        prompt = text + f"QUESTION: {question} \n Provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces."
 
         print(prompt)
 
@@ -300,12 +300,11 @@ def summarize_document(request):
 
     text = match_keyphrases(text)
 
-    answer = text + "\n" + "\n".join(questions)
-
     # remove unnecessary newlines
-    answer = re.sub(r'\n\n+', '\n\n', answer)
+    answer = re.sub(r'\n\n+', '\n\n', text)
 
-    print('answer', answer)
+    # remove the last newlines
+    answer = '\n'.join([x for x in answer.split('\n') if x != ''])
         
     # messages.append([1, answer])
 
@@ -314,6 +313,7 @@ def summarize_document(request):
     qa.user_id = user_id
     qa.feedback = feedback
     qa.answer = answer
+    qa.relevantquestions = json.dumps(questions)
     qa.txttosummarize = text
     qa.save()
 
@@ -323,7 +323,7 @@ def summarize_document(request):
     # thread.promptmessages = json.dumps(messages)
     thread.save()
 
-    return JsonResponse({'answer': answer}, status=200)
+    return JsonResponse({'answer': answer + ''.join(questions)}, status=200)
 
 @csrf_exempt
 @require_internal
