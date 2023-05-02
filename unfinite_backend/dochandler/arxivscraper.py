@@ -147,9 +147,21 @@ def google_scholar_scrape(query, num_result):
                         result.find("div", class_="gs_ggs gs_fl").find("a")["href"] if result.find("div",
                                                                                                    class_="gs_ggs gs_fl") else
                         result.find("h3", class_="gs_rt").find("a")["href"] if result.find("h3", class_="gs_rt") else None)
+                    # print(result)
+                    # break
                     result_map['title'] = title
                     result_map['year'] = date
                     result_map['pdf_link'] = pdf_link
+                    result_map['publisher'] = result.find("div", class_="gs_a").text.split("-")[-1].strip()
+                    # print(result_map)
+                    # break
+                    result_map['authors'] = []
+                    for item in result.find_all('div', {'class': 'gs_a'}):
+                        authors = item.find_all('a')
+                        for author in authors:
+                            result_map['authors'].append(author.text)
+                    # print(result_map)
+                    # break
                     scholar_articles[index] = result_map
                 return scholar_articles
             print("No results found for the query: ", query)
@@ -189,3 +201,4 @@ def arxiv_search(query, num_results=4):
 
     # example output
     # {1: {'title': 'Cataloging Prompt Patterns to Enhance the Discipline of Prompt Engineering', 'year': '', 'pdf_link': 'http://www.dre.vanderbilt.edu/~schmidt/PDF/ADA_Europe_Position_Paper.pdf'}, 2: {'title': 'Yes, You Can Make an App Too: A Systematic Study of Prompt Engineering in the Automatic Generation of Mobile Applications from User Queries', 'year': '2022', 'pdf_link': 'https://appinventor.mit.edu/assets/files/Shone_Jasmine_Rachel_RSIFinal.pdf'}, 3: {'title': 'Apractical SURVEY ON ZERO-SHOT PROMPT DESIGN FOR IN-CONTEXT LEARNING', 'year': '2023', 'pdf_link': 'https://www.researchgate.net/profile/Yinheng-Li/publication/369619413_A_PRACTICAL_SURVEY_ON_ZERO-SHOT_PROMPT_DESIGN_FOR_IN-CONTEXT_LEARNING/links/6424b45c315dfb4cceb88c49/A-PRACTICAL-SURVEY-ON-ZERO-SHOT-PROMPT-DESIGN-FOR-IN-CONTEXT-LEARNING.pdf'}, 4: {'title': "Why Johnny can't prompt: how non-AI experts try (and fail) to design LLM prompts", 'year': '2023', 'pdf_link': "https://www.researchgate.net/profile/Qian-Yang-19/publication/368577310_Why_Johnny_Can't_Prompt_How_Non-AI_Experts_Try_and_Fail_to_Design_LLM_Prompts/links/63ef6f3519130a1a4a8938ac/Why-Johnny-Cant-Prompt-How-Non-AI-Experts-Try-and-Fail-to-Design-LLM-Prompts.pdf"}}
+    # google_scholar_scrape("vaswani", 1)

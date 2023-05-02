@@ -719,3 +719,21 @@ def summarize_document_stream(request):
     r['Content-Disposition'] = f'attachment; filename="{docids[0]}.json"'
 
     return r
+
+@require_POST
+@requires_authentication
+def get_recommendations(request):
+
+    data = json.loads(request.body)
+
+    docid = data.get('docid')
+
+    if docid is None:
+        return JsonResponse({'detail':'failure'}, status=400)
+    
+    response = requests.post(f'{settings.DOCHANDLER_URL}get_recommendations/', headers={'Authorization': settings.QUERYHANDLER_KEY}, json=data)
+
+    if response.status_code != 200:
+        return JsonResponse(data={'detail': 'QueryHandler returned error'}, status=400)
+    
+    return JsonResponse(data=response.json(), status=200)

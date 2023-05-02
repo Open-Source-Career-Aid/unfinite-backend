@@ -30,4 +30,5 @@ urlpatterns = [
     path('searchunfinite/', views.search_unfinite, name='api-search-unfinite'),
     path('preview/', views.summarize_document_fm_global, name='api-summarize-doc-fm-global'),
     path('summarize_document_stream/', views.summarize_document_stream, name='api-summarize-document-stream'),
+    path('get_recommendations/', views.get_recommendations, name='api-get-recommendations'),
 ]
