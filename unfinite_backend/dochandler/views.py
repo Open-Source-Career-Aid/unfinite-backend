@@ -22,7 +22,7 @@ openai.api_key = settings.OPENAI_API_KEY
 pinecone.init(api_key=settings.PINECONE_KEY, environment="us-central1-gcp")
 index = pinecone.Index('unfinite-embeddings')
 
-special_prompts = {1: 'Simplify for someone who isn\'t knowledgeable in the field.\n Provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces.', 2: 'Dumbsplain for a 5 year old kid.\n Provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces.', 3: 'Talk extremely technical as you would to an academic.\n Provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces.', 4: 'Use an analogy to answer the question.\n Provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces.'}
+special_prompts = {1: 'Simplify for someone who isn\'t knowledgeable in the field.\n Provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces.\nAnswer:', 2: 'Dumbsplain for a 5 year old kid.\n Provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces.\nAnswer:', 3: 'Talk extremely technical as you would to an academic.\n Provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces.\nAnswer:', 4: 'Use an analogy to answer the question.\n Provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces.\nAnswer:'}
 
 # a functuon that uses regex to verify that a text is a url
 def is_url(text):
@@ -443,8 +443,11 @@ def summarize_document_stream(request):
     user_id = d.get('user')
     special_id = d.get('special_id')
 
-    if question == "Introduction":
-        question = "Use the abstract, title, and author names to introduce the document and provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces."
+    is_overview = False
+
+    if question == "Overview":
+        is_overview = True
+        question = "Use the abstract, title, and author names to introduce the document and provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces.\nAnswer:"
     
     ## vector search here, only through the docids
     ## generate response and return it
@@ -548,28 +551,33 @@ def summarize_document_stream(request):
         
         # elif modus_operandi == 'The answer is very specific':
         # TODO: save the question embeddings for future use
-        response = openai.Embedding.create(input=question, engine='text-embedding-ada-002')
-        question_embedding = response['data'][0]['embedding']
+        # if is_overview is False
+        if is_overview is False:
+            response = openai.Embedding.create(input=question, engine='text-embedding-ada-002')
+            question_embedding = response['data'][0]['embedding']
 
-        similar = index.query(
-            vector=question_embedding,
-            filter={
-                "document": {"$in": list(map(str, json.loads(docids)))},
-                "dev": {"$eq": not settings.IS_PRODUCTION},
-            },
-            top_k=2,
-            include_metadata=True
-        )
+            similar = index.query(
+                vector=question_embedding,
+                filter={
+                    "document": {"$in": list(map(str, json.loads(docids)))},
+                    "dev": {"$eq": not settings.IS_PRODUCTION},
+                },
+                top_k=5,
+                include_metadata=True
+            )
 
-        # print(similar)
+            # print(similar)
 
-        text_to_summarize = list(map(matches_to_text, similar['matches']))
+            text_to_summarize = list(map(matches_to_text, similar['matches']))
+        else:
+            # get the first 2 chunks
+            text_to_summarize = json.loads(Document.objects.get(id=json.loads(docids)[0]).document_chunks)[:2]
 
         text = ""
         for chunk in text_to_summarize:
             text += chunk+"\n"
 
-        prompt = text + f'QUESTION: {question}'
+        prompt = text + f"QUESTION: {question} \n Provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces.\nAnswer:"
 
         print(prompt)
 

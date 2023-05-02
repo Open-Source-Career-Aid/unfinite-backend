@@ -133,13 +133,15 @@ def gpt3_3turbo_completion_stream(messages, qa, summarymodel='gpt-3.5-turbo'):
 				# text is now the answer without the questions
 				text = re.sub(r'\{(.*?)\}', '', finalsummary)
 				text = match_keyphrases(text)
-				answer = text + "\n" + "\n".join(questions)
 				# remove unnecessary newlines
-				answer = re.sub(r'\n\n+', '\n\n', answer)
+				answer = re.sub(r'\n\n+', '\n\n', text)
+				answer = '\n\n'.join([x for x in answer.split('\n') if x != ''])
 				qa.answer = answer
+				# save questions in the qa where questions are enclosed in {}
+				qa.relevantquestions = json.dumps(questions)
 				qa.save()
 				print('this is being returned')
-				yield json.dumps({"finalresponse": 1, "data": answer})
+				yield json.dumps({"finalresponse": 1, "data": answer + ''.join(questions)})
 				yield '\n'
 				continue
 			if chunk.choices[0].delta.role == 'assistant':
@@ -154,7 +156,7 @@ def gpt3_3turbo_completion_stream(messages, qa, summarymodel='gpt-3.5-turbo'):
 			# 	raise StopIteration
 			finalsummary += c
 
-		print(chunk.choices[0].delta.content)
+		# print(chunk.choices[0].delta.content)
 		yield json.dumps({'data':chunk, 'finalresponse':0})
 		yield '\n'
 		# response.flush()
