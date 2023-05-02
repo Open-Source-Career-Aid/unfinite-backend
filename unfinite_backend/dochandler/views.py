@@ -432,6 +432,179 @@ def search_unfinite(request):
 
 @csrf_exempt
 @require_internal
+# TODO: change the name from summarize_document to something that makes more sense, e.g. answer_question
+def summarize_document_stream(request):
+
+    d = json.loads(request.body)
+
+    threadid = d.get('threadid')
+    question = d.get('question')
+    docids = d.get('docids') # list of docids to search through
+    user_id = d.get('user')
+    special_id = d.get('special_id')
+
+    if question == "Introduction":
+        question = "Use the abstract, title, and author names to introduce the document and provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces."
+    
+    ## vector search here, only through the docids
+    ## generate response and return it
+
+    # load thread
+    thread = Thread.objects.get(id=threadid)
+
+    # load the messages
+    messages = thread.get_promptmessages()
+
+    associated_qas = sorted(list(QA.objects.filter(thread=thread)), key = lambda x: x.index)
+
+    # create a new QA object
+    qa = QA.objects.create(thread=thread, question=question, index=len(associated_qas))
+
+    # create a new feedback model
+    feedback = FeedbackModel.objects.create(qa=qa)
+
+    if special_id:
+
+        # simplify the last answer
+        last_qa = associated_qas[-1]
+
+        text = last_qa.txttosummarize
+        last_question = last_qa.question
+        last_answer = last_qa.answer
+        prompt = text + f'QUESTION: {last_question}'
+
+        messages.append([0, prompt])
+        messages.append([1, last_answer])
+        messages.append([0, f"{special_prompts[special_id]}"])
+    
+    else:
+
+        # based on the query decide whether to summarize the whole document or perform a dedicated vector search
+        #modus_operandi = get_modus_operandi(question)
+
+        if False: #modus_operandi != 'The answer is very specific':
+
+            all_chunks = index.query(
+                vector=[0 for x in range(1536)],
+                filter={
+                    "document": {"$in": list(map(str, json.loads(docids)))},
+                    "dev": {"$eq": not settings.IS_PRODUCTION},
+                },
+                include_values=True,
+                top_k=500
+            )
+            average_embedding = np.mean([v['values'] for v in all_chunks['matches']], axis=0)
+
+            similar = index.query(
+                vector=list(average_embedding),
+                filter={
+                    "document": {"$in": list(map(str, json.loads(docids)))},
+                    "dev": {"$eq": not settings.IS_PRODUCTION},
+                },
+                include_metadata=True,
+                top_k=5
+            )
+
+            # the following code should be abstracted. since it's written twice. I wasn't sure if   
+            # there was a reason for organizing it this way, so I left it how it was.
+            
+            text_to_summarize = list(map(matches_to_text, similar['matches']))
+
+            text = ""
+            for chunk in text_to_summarize:
+                text += chunk+"\n"
+
+            prompt = text + f'QUESTION: {question}'
+
+            print(prompt)
+
+            messages.append([0, prompt])
+
+            def zero_or_one(x):
+                if x == 0:
+                    return "user"
+                return "assistant"
+
+            messagestochat = [{'role': zero_or_one(x[0]), 'content': x[1]} for x in messages]
+            
+            answer = gpt3_3turbo_completion(messagestochat)
+            # messages.append([1, answer])
+
+            # update the qa object and save it
+            qa.docids = docids
+            qa.user_id = user_id
+            qa.feedback = feedback
+            qa.answer = answer
+            qa.txttosummarize = text
+            qa.save()
+
+            # update the thread object and save it
+            #qaid = qa.id
+            #thread.add_qamodel(qaid)
+            # thread.promptmessages = json.dumps(messages)
+            thread.save()
+
+            return JsonResponse({'answer': answer}, status=200)
+        
+        # elif modus_operandi == 'The answer is very specific':
+        # TODO: save the question embeddings for future use
+        response = openai.Embedding.create(input=question, engine='text-embedding-ada-002')
+        question_embedding = response['data'][0]['embedding']
+
+        similar = index.query(
+            vector=question_embedding,
+            filter={
+                "document": {"$in": list(map(str, json.loads(docids)))},
+                "dev": {"$eq": not settings.IS_PRODUCTION},
+            },
+            top_k=2,
+            include_metadata=True
+        )
+
+        # print(similar)
+
+        text_to_summarize = list(map(matches_to_text, similar['matches']))
+
+        text = ""
+        for chunk in text_to_summarize:
+            text += chunk+"\n"
+
+        prompt = text + f'QUESTION: {question}'
+
+        print(prompt)
+
+        messages.append([0, prompt])
+
+    def zero_or_one(x):
+        if x == 0:
+            return "user"
+        return "assistant"
+
+    messagestochat = [{'role': zero_or_one(x[0]), 'content': x[1]} for x in messages]
+    print(messagestochat)
+    #if json.loads(docids)[0] == 458:
+    #    answer = gpt3_3turbo_completion(messagestochat, summarymodel="gpt-4")
+    #    print("did summarization with gpt-4")
+    qa.docids = docids
+    qa.user_id = user_id
+    qa.feedback = feedback
+    qa.txttosummarize = text
+    qa.save()
+    stream = gpt3_3turbo_completion_stream(messagestochat, qa)
+    thread.save()
+
+    def stream_generator():
+        for chunk in stream:
+            # Encode each chunk as JSON
+            yield chunk
+
+    chunk_size = 32
+
+    # return JsonResponse(data={'summary': summary, 'urls':s.urls, 'urlidx':s.urlidx, 'id': s.id, 'was_new':was_new}, status=200)
+    response =  StreamingHttpResponse(stream_generator(), content_type='application/json')
+    response.block_size = chunk_size
+
+    return response
 def get_recommendations(request):
 
     d = json.loads(request.body)

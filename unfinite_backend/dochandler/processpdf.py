@@ -6,6 +6,7 @@ import PyPDF2
 import io
 import numpy as np
 import requests
+from .keyphrasing.kpextraction import *
 
 # enter openai api key here
 
@@ -87,6 +88,76 @@ def gpt3_3turbo_completion(messages, summarymodel='gpt-3.5-turbo'):
 		return None, None, None
 	
 	return response['choices'][0]['message']['content']
+
+def gpt3_3turbo_completion_stream(messages, qa, summarymodel='gpt-3.5-turbo'):
+
+	temperature = 0.2
+	max_length = 750
+	top_p = 1.0
+	frequency_penalty = 0.2
+	presence_penalty = 0.1
+
+	# making API request and error checking
+	print("making API request")
+	try:
+		stream = openai.ChatCompletion.create(
+			model=summarymodel, 
+			messages=messages, 
+			temperature=temperature, 
+			max_tokens=max_length, 
+			top_p=top_p, 
+			frequency_penalty=frequency_penalty, 
+			presence_penalty=presence_penalty,
+			stream=True)
+	except openai.error.RateLimitError as e:
+		print("OpenAI API rate limit error! See below:")
+		print(e)
+		return None, None, None
+	except Exception as e:
+		print("Unknown OpenAI API error! See below:")
+		print(e)
+		return None, None, None
+	
+	#yield from stream
+
+	finalsummary = ''
+
+	prefix = ''
+
+	for chunk in stream:
+
+		try:
+			if chunk.choices[0].finish_reason == 'stop':
+				questions = re.findall(r'\{(.*?)\}', finalsummary)
+				questions = ['{'+x+'}' for x in questions]
+				# text is now the answer without the questions
+				text = re.sub(r'\{(.*?)\}', '', finalsummary)
+				text = match_keyphrases(text)
+				answer = text + "\n" + "\n".join(questions)
+				# remove unnecessary newlines
+				answer = re.sub(r'\n\n+', '\n\n', answer)
+				qa.answer = answer
+				qa.save()
+				print('this is being returned')
+				yield json.dumps({"finalresponse": 1, "data": answer})
+				yield '\n'
+				continue
+			if chunk.choices[0].delta.role == 'assistant':
+				continue
+		except:
+			c = chunk.choices[0].delta.content
+			# if '{' in c:
+			# 	t = c[:c.index('{')]
+			# 	finalsummary += t
+			# 	yield t
+			# 	yield '\n'
+			# 	raise StopIteration
+			finalsummary += c
+
+		print(chunk.choices[0].delta.content)
+		yield json.dumps({'data':chunk, 'finalresponse':0})
+		yield '\n'
+		# response.flush()
 
 def similarity(v1, v2):  # return dot product of two vectors
 	return np.dot(v1, v2)
