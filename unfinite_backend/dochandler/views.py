@@ -531,7 +531,7 @@ def summarize_document_stream(request):
                 "document": {"$in": list(map(str, json.loads(docids)))},
                 "dev": {"$eq": not settings.IS_PRODUCTION},
             },
-            top_k=5,
+            top_k=2,
             include_metadata=True
         )
 

@@ -121,11 +121,13 @@ def gpt3_3turbo_completion_stream(messages, qa, summarymodel='gpt-3.5-turbo'):
 	#yield from stream
 
 	finalsummary = ''
-    
-    prefix = ''
-    for chunk in stream:
-        try:
-            if chunk.choices[0].finish_reason == 'stop':
+
+	prefix = ''
+
+	for chunk in stream:
+
+		try:
+			if chunk.choices[0].finish_reason == 'stop':
 				questions = re.findall(r'\{(.*?)\}', finalsummary)
 				questions = ['{'+x+'}' for x in questions]
 				# text is now the answer without the questions
@@ -134,24 +136,28 @@ def gpt3_3turbo_completion_stream(messages, qa, summarymodel='gpt-3.5-turbo'):
 				answer = text + "\n" + "\n".join(questions)
 				# remove unnecessary newlines
 				answer = re.sub(r'\n\n+', '\n\n', answer)
-                qa.answer = answer
-                qa.save()
-                continue
-			if chunk.choices[0].delta.role == 'assistant':
-                continue
-        except:
-			c = chunk.choices[0].delta.content
-			if '{' in c:
-				t = c[:c.index('{')]
-				finalsummary += t
-				yield t
+				qa.answer = answer
+				qa.save()
+				print('this is being returned')
+				yield json.dumps({"finalresponse": 1, "data": answer})
 				yield '\n'
-				raise StopIteration
-            finalsummary += c
-            
-        yield json.dumps(chunk)
-        yield '\n'
-        # response.flush()
+				continue
+			if chunk.choices[0].delta.role == 'assistant':
+				continue
+		except:
+			c = chunk.choices[0].delta.content
+			# if '{' in c:
+			# 	t = c[:c.index('{')]
+			# 	finalsummary += t
+			# 	yield t
+			# 	yield '\n'
+			# 	raise StopIteration
+			finalsummary += c
+
+		print(chunk.choices[0].delta.content)
+		yield json.dumps({'data':chunk, 'finalresponse':0})
+		yield '\n'
+		# response.flush()
 
 def similarity(v1, v2):  # return dot product of two vectors
 	return np.dot(v1, v2)
