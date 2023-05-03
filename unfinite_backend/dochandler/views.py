@@ -655,10 +655,10 @@ def get_outline(request):
         return JsonResponse({'detail':outline}, status=200)
 
     # get the outline
-    outline = get_outline_from_text('\n'.join(chunks))
+    generatedoutline = get_outline_from_text('\n'.join(chunks))
 
     # remove the '- ' from each line of the outline
-    outlinelist = [x[2:] for x in outline.split('\n')]
+    outlinelist = [x[2:] for x in generatedoutline.split('\n')]
     outlinelist = [x.split(': ') for x in outlinelist if x != '']
 
     # save the outline in the document
