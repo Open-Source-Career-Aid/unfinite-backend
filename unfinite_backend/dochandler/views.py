@@ -17,6 +17,7 @@ from .keyphrasing.kpextraction import *
 from .outline.pdfoutliner import title_from_pdf
 #from .LayeronePrompting import *
 from .arxivscraper import *
+from .outline.outlinefromLLM import *
 
 openai.api_key = settings.OPENAI_API_KEY
 pinecone.init(api_key=settings.PINECONE_KEY, environment="us-central1-gcp")
@@ -613,6 +614,7 @@ def summarize_document_stream(request):
     response.block_size = chunk_size
 
     return response
+
 def get_recommendations(request):
 
     d = json.loads(request.body)
@@ -632,3 +634,36 @@ def get_recommendations(request):
         toreturn.append([results[result]['title'], results[result]['pdf_link'], results[result]['authors'], results[result]['year'], results[result]['publisher']])
 
     return JsonResponse({'detail':json.dumps(toreturn)}, status=200)
+
+@csrf_exempt
+@require_internal
+def get_outline(request):
+
+    d = json.loads(request.body)
+    docid = d.get('docid')
+
+    # get the document
+    doc = Document.objects.get(id=docid)
+
+    # take the first two chunks
+    chunks = json.loads(doc.document_chunks)[:2]
+
+    # get outline from doc
+    outline = doc.outline
+
+    if len(outline) > 0:
+        return JsonResponse({'detail':outline}, status=200)
+
+    # get the outline
+    generatedoutline = get_outline_from_text('\n'.join(chunks))
+
+    # remove the '- ' from each line of the outline
+    outlinelist = [x[2:] for x in generatedoutline.split('\n')]
+    outlinelist = [x.split(': ') for x in outlinelist if x != '']
+
+    # save the outline in the document
+    doc.outline = json.dumps(outlinelist)
+    doc.save()
+
+    # return the outline
+    return JsonResponse({'detail':json.dumps(outlinelist)}, status=200)
