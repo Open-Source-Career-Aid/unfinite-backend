@@ -710,6 +710,7 @@ def summarize_document_stream(request):
     def stream_response(response):
         for chunk in response.iter_content(chunk_size=32):
             if chunk:
+                print('api yielding chunk')
                 yield chunk
 
     # Forward the response as a streaming response
@@ -717,7 +718,6 @@ def summarize_document_stream(request):
 
     # Set any headers that are required for the response
     r['Content-Disposition'] = f'attachment; filename="{docids[0]}.json"'
-
     return r
 
 @require_POST

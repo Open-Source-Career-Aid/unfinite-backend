@@ -604,6 +604,7 @@ def summarize_document_stream(request):
     def stream_generator():
         for chunk in stream:
             # Encode each chunk as JSON
+            print('dochandler yielding chunk')
             yield chunk
 
     chunk_size = 32
