@@ -92,6 +92,16 @@ def extract_text_from_pdf_url(pdf_url):
     except Exception as e:
         print("Error: ", e)
     
+def parse_pdf_from_url(pdf_url):
+
+    response = requests.get(pdf_url)
+    in_file = io.BytesIO(response.content)
+
+    parser = PDFParser(in_file)
+    doc = PDFDocument(parser)
+    
+    return doc
+
 def make_chunks(listoflines):
     
     minlen = 64

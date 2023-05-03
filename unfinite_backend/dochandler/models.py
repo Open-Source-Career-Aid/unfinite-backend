@@ -12,8 +12,7 @@ devstr = '' if settings.IS_PRODUCTION else 'dev-'
 # 0 = user, 1 = assistant
 messages = [[0, "You are an expert summarizer and teacher."], [0, "Please summarize the following texts into a short and coherent answer to the question. Make the answer accessible, break it down into points and keep paragraphs short where you can."],
             [0, """Instructions: 
-	1. Structure the answer into multiple paragraphs where necessary.
-    2. If the attached text is not relevant, please say you couldn't find the answer."""]]
+    1. If the attached text is not relevant, please say you couldn't find the answer."""]]
 
 def openai_to_pinecone(embedding, document_id):
     page = embedding['index']
@@ -161,6 +160,7 @@ class QA(models.Model):
         feedback = models.ForeignKey('FeedbackModel', on_delete=models.SET_NULL, null=True)
         user = models.ForeignKey('api.UnfiniteUser', on_delete=models.SET_NULL, null=True)
         index = models.IntegerField()
+        relevantquestions = models.TextField(default=json.dumps([])) # JSON.dumps of list of relevant questions
 
         def save(self, *args, **kwargs):
             ''' On save, update timestamps '''
