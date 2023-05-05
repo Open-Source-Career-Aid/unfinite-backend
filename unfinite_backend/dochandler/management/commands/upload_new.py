@@ -11,7 +11,7 @@ def hash_text(text: str) -> str:
     return str(hashlib.sha256(text.encode("utf-8")).hexdigest())
 
 # I modified this one for populating the new index
-def create_index(contexts: Tuple[List[str], Dict], index: Any, embeddings: Embeddings, sparse_encoder: Any, ids: Optional[List[str]] = None) -> None:
+def create_index(contexts: Tuple[List[str], Dict], index: Any, embeddings: Any, sparse_encoder: Any, ids: Optional[List[str]] = None) -> None:
     batch_size = 32
     _iterator = range(0, len(contexts), batch_size)
     try:
@@ -37,7 +37,7 @@ def create_index(contexts: Tuple[List[str], Dict], index: Any, embeddings: Embed
         # create dense vectors
         dense_embeds = embeddings.embed_documents(context_batch)
         # create sparse vectors
-        sparse_embeds = sparse_encoder.encode_documents([context[0] for context in context_batch)
+        sparse_embeds = sparse_encoder.encode_documents([context[0] for context in context_batch])
         for s in sparse_embeds:
             s["values"] = [float(s1) for s1 in s["values"]]
 
@@ -88,10 +88,10 @@ class Command(BaseCommand):
         for i in tqdm(range(len(metadata))):
             doc_id = metadata[i]['metadata']['document']
             if doc_id not in doc_chunks:
-                chunks = json.loads(Document.objects.get(id=doc_id).chunks)
+                chunks = json.loads(Document.objects.get(id=doc_id).document_chunks)
                 doc_chunks[doc_id] = chunks
             
-            tuples.append((doc_chunks[doc_id][metadata[i]['metadata']['chunk']], metadata[i]))
+            tuples.append((doc_chunks[doc_id][int(metadata[i]['metadata']['chunk'])], metadata[i]))
 
         print("Connecting to index...")
         pinecone.init(api_key="1b0baa48-cedf-4397-b791-95d5e4f1ba76", environment="northamerica-northeast1-gcp")
@@ -99,7 +99,7 @@ class Command(BaseCommand):
 
         bm25_encoder = BM25Encoder().default()
         print("Upserting batches...")
-        #create_index(tuples, index, embeddings, bm25_encoder)
+        create_index(tuples, index, embeddings, bm25_encoder)
 
 
 
