@@ -10,10 +10,7 @@ mysqlclient==2.0.3
 html2text
 readability
 selenium
-urllib
 langdetect
-re
-time
 numpy
 tldextract
 nltk
@@ -27,3 +24,5 @@ pdfminer.six
 sentence-transformers
 pandas
 arxivscraper
+jellyfish
+PyMuPDF

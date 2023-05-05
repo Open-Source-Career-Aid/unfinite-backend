@@ -12,15 +12,19 @@ import re
 import uuid
 from django.conf import settings
 from .pdfChunks import pdftochunks_url, pdfdchunks_file
+from django.core.files.uploadhandler import FileUploadHandler
+# import kpextraction.py from keyphrasing folder
+from .keyphrasing.kpextraction import *
+from .outline.pdfoutliner import title_from_pdf
 #from .LayeronePrompting import *
 from .arxivscraper import *
-from django.core.files.uploadhandler import FileUploadHandler
+from .outline.outlinefromLLM import *
 
 openai.api_key = settings.OPENAI_API_KEY
 pinecone.init(api_key=settings.PINECONE_KEY, environment="us-central1-gcp")
 index = pinecone.Index('unfinite-embeddings')
 
-special_prompts = {1: 'Simplify for someone who isn\'t knowledgeable in the field', 2: 'Dumbsplain for a 5 year old kid', 3: 'Talk extremely technical as you would to an academic'}
+special_prompts = {1: 'Simplify for someone who isn\'t knowledgeable in the field.\n Provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces.\nAnswer:', 2: 'Dumbsplain for a 5 year old kid.\n Provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces.\nAnswer:', 3: 'Talk extremely technical as you would to an academic.\n Provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces.\nAnswer:', 4: 'Use an analogy to answer the question.\n Provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces.\nAnswer:'}
 
 # a functuon that uses regex to verify that a text is a url
 def is_url(text):
@@ -110,21 +114,33 @@ def embed_document(request):
         if not is_url(url) and not url.endswith('pdf'):
             print("Invalid URL")
             return JsonResponse({'detail':'Invalid URL'}, status=400)
-
-
+            
         if len(Document.objects.filter(url=url)) != 0:
-            if Document.objects.filter(url=url).first() is None:
-                return JsonResponse({'detail': 'Document does not exist'}, status=404)
-            return JsonResponse({'detail':'Document already embedded', 'document_id': Document.objects.get(url=url).id, 'thread_id':threadid}, status=200)
 
+             # load the document
+            doc = Document.objects.get(url=url)
+
+             # check if the title is already there
+            if doc.title:
+                return JsonResponse({'detail':'Document already embedded', 'document_id': doc.id, 'thread_id':threadid, 'title': doc.title}, status=200)
+
+            # get the title
+            title = title_from_pdf(url)
+
+            # update the document
+            doc.title = title
+            doc.save()
+
+            return JsonResponse({'detail':'Document already embedded', 'document_id': Document.objects.get(url=url).id, 'thread_id':threadid, 'title': Document.objects.get(url=url).title}, status=200)
 
         pdf_text = pdftochunks_url(url) #extractpdf(url)
-        doc = Document.objects.create(url=url, user_id=user_id, document_chunks=json.dumps(pdf_text), num_chunks=len(pdf_text))
+        title = title_from_pdf(url)
+        doc = Document.objects.create(url=url, user_id=user_id, document_chunks=json.dumps(pdf_text), num_chunks=len(pdf_text), title=title)
         # print(pdf_text)
         doc.save()
         doc.embed(index)
         log_signal.send(sender=None, user_id=user_id, desc="User indexed new document")
-        return JsonResponse({'Detail':'Successfully indexed the document.', 'document_id': doc.id, 'thread_id': threadid}, status=200)
+        return JsonResponse({'Detail':'Successfully indexed the document.', 'document_id': doc.id, 'thread_id': threadid, 'title': title }, status=200)
 
 # def matches_to_text(result):
 
@@ -161,8 +177,11 @@ def summarize_document(request):
     user_id = d.get('user')
     special_id = d.get('special_id')
 
-    if question == "Introduction":
-        question = "Use the abstract, title, and author names to introduce the document and provide 3 follow up questions for the user. Encapsulate each question between curly braces."
+    is_overview = False
+
+    if question == "Overview":
+        is_overview = True
+        question = "Use the abstract, title, and author names to introduce the document and provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces."
     
     ## vector search here, only through the docids
     ## generate response and return it
@@ -264,28 +283,34 @@ def summarize_document(request):
         
         # elif modus_operandi == 'The answer is very specific':
         # TODO: save the question embeddings for future use
-        response = openai.Embedding.create(input=question, engine='text-embedding-ada-002')
-        question_embedding = response['data'][0]['embedding']
+        # if is_overview is False
+        if is_overview is False:
+            response = openai.Embedding.create(input=question, engine='text-embedding-ada-002')
+            question_embedding = response['data'][0]['embedding']
 
-        similar = index.query(
-            vector=question_embedding,
-            filter={
-                "document": {"$in": list(map(str, json.loads(docids)))},
-                "dev": {"$eq": not settings.IS_PRODUCTION},
-            },
-            top_k=5,
-            include_metadata=True
-        )
+            similar = index.query(
+                vector=question_embedding,
+                filter={
+                    "document": {"$in": list(map(str, json.loads(docids)))},
+                    "dev": {"$eq": not settings.IS_PRODUCTION},
+                },
+                top_k=5,
+                include_metadata=True
+            )
 
-        # print(similar)
+            # print(similar)
 
-        text_to_summarize = list(map(matches_to_text, similar['matches']))
-
+            text_to_summarize = list(map(matches_to_text, similar['matches']))
+        else:
+            # get the first 2 chunks
+            text_to_summarize = json.loads(Document.objects.get(id=json.loads(docids)[0]).document_chunks)[:2]
+        
         text = ""
         for chunk in text_to_summarize:
             text += chunk+"\n"
+        
 
-        prompt = text + f'QUESTION: {question}'
+        prompt = text + f"QUESTION: {question} \n Provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces."
 
         print(prompt)
 
@@ -303,6 +328,23 @@ def summarize_document(request):
         print("did summarization with gpt-4")
     else:
         answer = gpt3_3turbo_completion(messagestochat)
+
+    # answercopy = answer
+    # break answer into text and questions, a question is encapsulated between curly braces
+
+    questions = re.findall(r'\{(.*?)\}', answer)
+    questions = ['{'+x+'}' for x in questions]
+
+    # text is now the answer without the questions
+    text = re.sub(r'\{(.*?)\}', '', answer)
+
+    text = match_keyphrases(text)
+
+    # remove unnecessary newlines
+    answer = re.sub(r'\n\n+', '\n\n', text)
+
+    # remove unnecessary spaces
+    answer = '\n\n'.join([x for x in answer.split('\n') if x != ''])
         
     # messages.append([1, answer])
 
@@ -311,6 +353,7 @@ def summarize_document(request):
     qa.user_id = user_id
     qa.feedback = feedback
     qa.answer = answer
+    qa.relevantquestions = json.dumps(questions)
     qa.txttosummarize = text
     qa.save()
 
@@ -320,7 +363,7 @@ def summarize_document(request):
     # thread.promptmessages = json.dumps(messages)
     thread.save()
 
-    return JsonResponse({'answer': answer}, status=200)
+    return JsonResponse({'answer': answer + ''.join(questions)}, status=200)
 
 @csrf_exempt
 @require_internal
@@ -427,3 +470,239 @@ def search_unfinite(request):
 
     return JsonResponse({'detail':json.dumps(toreturn)}, status=200)
 
+@csrf_exempt
+@require_internal
+# TODO: change the name from summarize_document to something that makes more sense, e.g. answer_question
+def summarize_document_stream(request):
+
+    d = json.loads(request.body)
+
+    threadid = d.get('threadid')
+    question = d.get('question')
+    docids = d.get('docids') # list of docids to search through
+    user_id = d.get('user')
+    special_id = d.get('special_id')
+
+    is_overview = False
+
+    if question == "Overview":
+        is_overview = True
+        question = "Use the abstract, title, and author names to introduce the document and provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces.\nAnswer:"
+    
+    ## vector search here, only through the docids
+    ## generate response and return it
+
+    # load thread
+    thread = Thread.objects.get(id=threadid)
+
+    # load the messages
+    messages = thread.get_promptmessages()
+
+    associated_qas = sorted(list(QA.objects.filter(thread=thread)), key = lambda x: x.index)
+
+    # create a new QA object
+    qa = QA.objects.create(thread=thread, question=question, index=len(associated_qas))
+
+    # create a new feedback model
+    feedback = FeedbackModel.objects.create(qa=qa)
+
+    if special_id:
+
+        # simplify the last answer
+        last_qa = associated_qas[-1]
+
+        text = last_qa.txttosummarize
+        last_question = last_qa.question
+        last_answer = last_qa.answer
+        prompt = text + f'QUESTION: {last_question}'
+
+        messages.append([0, prompt])
+        messages.append([1, last_answer])
+        messages.append([0, f"{special_prompts[special_id]}"])
+    
+    else:
+
+        # based on the query decide whether to summarize the whole document or perform a dedicated vector search
+        #modus_operandi = get_modus_operandi(question)
+
+        if False: #modus_operandi != 'The answer is very specific':
+
+            all_chunks = index.query(
+                vector=[0 for x in range(1536)],
+                filter={
+                    "document": {"$in": list(map(str, json.loads(docids)))},
+                    "dev": {"$eq": not settings.IS_PRODUCTION},
+                },
+                include_values=True,
+                top_k=500
+            )
+            average_embedding = np.mean([v['values'] for v in all_chunks['matches']], axis=0)
+
+            similar = index.query(
+                vector=list(average_embedding),
+                filter={
+                    "document": {"$in": list(map(str, json.loads(docids)))},
+                    "dev": {"$eq": not settings.IS_PRODUCTION},
+                },
+                include_metadata=True,
+                top_k=5
+            )
+
+            # the following code should be abstracted. since it's written twice. I wasn't sure if   
+            # there was a reason for organizing it this way, so I left it how it was.
+            
+            text_to_summarize = list(map(matches_to_text, similar['matches']))
+
+            text = ""
+            for chunk in text_to_summarize:
+                text += chunk+"\n"
+
+            prompt = text + f'QUESTION: {question}'
+
+            print(prompt)
+
+            messages.append([0, prompt])
+
+            def zero_or_one(x):
+                if x == 0:
+                    return "user"
+                return "assistant"
+
+            messagestochat = [{'role': zero_or_one(x[0]), 'content': x[1]} for x in messages]
+            
+            answer = gpt3_3turbo_completion(messagestochat)
+            # messages.append([1, answer])
+
+            # update the qa object and save it
+            qa.docids = docids
+            qa.user_id = user_id
+            qa.feedback = feedback
+            qa.answer = answer
+            qa.txttosummarize = text
+            qa.save()
+
+            # update the thread object and save it
+            #qaid = qa.id
+            #thread.add_qamodel(qaid)
+            # thread.promptmessages = json.dumps(messages)
+            thread.save()
+
+            return JsonResponse({'answer': answer}, status=200)
+        
+        # elif modus_operandi == 'The answer is very specific':
+        # TODO: save the question embeddings for future use
+        # if is_overview is False
+        if is_overview is False:
+            response = openai.Embedding.create(input=question, engine='text-embedding-ada-002')
+            question_embedding = response['data'][0]['embedding']
+
+            similar = index.query(
+                vector=question_embedding,
+                filter={
+                    "document": {"$in": list(map(str, json.loads(docids)))},
+                    "dev": {"$eq": not settings.IS_PRODUCTION},
+                },
+                top_k=5,
+                include_metadata=True
+            )
+
+            # print(similar)
+
+            text_to_summarize = list(map(matches_to_text, similar['matches']))
+        else:
+            # get the first 2 chunks
+            text_to_summarize = json.loads(Document.objects.get(id=json.loads(docids)[0]).document_chunks)[:2]
+
+        text = ""
+        for chunk in text_to_summarize:
+            text += chunk+"\n"
+
+        prompt = text + f"QUESTION: {question} \n Provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces.\nAnswer:"
+
+        print(prompt)
+
+        messages.append([0, prompt])
+
+    def zero_or_one(x):
+        if x == 0:
+            return "user"
+        return "assistant"
+
+    messagestochat = [{'role': zero_or_one(x[0]), 'content': x[1]} for x in messages]
+    print(messagestochat)
+    #if json.loads(docids)[0] == 458:
+    #    answer = gpt3_3turbo_completion(messagestochat, summarymodel="gpt-4")
+    #    print("did summarization with gpt-4")
+    qa.docids = docids
+    qa.user_id = user_id
+    qa.feedback = feedback
+    qa.txttosummarize = text
+    qa.save()
+    stream = gpt3_3turbo_completion_stream(messagestochat, qa)
+    thread.save()
+
+    def stream_generator():
+        for chunk in stream:
+            # Encode each chunk as JSON
+            yield chunk
+
+    chunk_size = 32
+
+    # return JsonResponse(data={'summary': summary, 'urls':s.urls, 'urlidx':s.urlidx, 'id': s.id, 'was_new':was_new}, status=200)
+    response =  StreamingHttpResponse(stream_generator(), content_type='application/json')
+    response.block_size = chunk_size
+
+    return response
+
+def get_recommendations(request):
+
+    d = json.loads(request.body)
+    docid = d.get('docid')
+
+    # get the document
+    doc = Document.objects.get(id=docid)
+
+    # get the document's title
+    title = doc.title
+
+    # use google scholar to get the top 5 results
+    results = google_scholar_scrape(title, num_result=5)
+
+    toreturn = []
+    for result in results:
+        toreturn.append([results[result]['title'], results[result]['pdf_link'], results[result]['authors'], results[result]['year'], results[result]['publisher']])
+
+    return JsonResponse({'detail':json.dumps(toreturn)}, status=200)
+
+@csrf_exempt
+@require_internal
+def get_outline(request):
+
+    d = json.loads(request.body)
+    docid = d.get('docid')
+
+    # get the document
+    doc = Document.objects.get(id=docid)
+
+    # take the first two chunks
+    chunks = json.loads(doc.document_chunks)[:2]
+
+    # get outline from doc
+    outline = doc.outline
+
+    if len(outline) > 0:
+        return JsonResponse({'detail':outline}, status=200)
+
+    # get the outline
+    generatedoutline = get_outline_from_text('\n'.join(chunks))
+
+    # remove the '- ' from each line of the outline
+    outlinelist = [x[2:] for x in generatedoutline.split('\n')]
+    outlinelist = [x.split(': ') for x in outlinelist if x != '']
+
+    # save the outline in the document
+    doc.outline = json.dumps(outlinelist)
+    doc.save()
+
+    # return the outline
+    return JsonResponse({'detail':json.dumps(outlinelist)}, status=200)
