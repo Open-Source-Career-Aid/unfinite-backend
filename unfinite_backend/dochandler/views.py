@@ -11,7 +11,8 @@ from .models import Document, Thread, QA, FeedbackModel
 import re
 import uuid
 from django.conf import settings
-from .pdfChunks import pdftochunks_url
+from .pdfChunks import pdftochunks_url, pdfdchunks_file
+from django.core.files.uploadhandler import FileUploadHandler
 # import kpextraction.py from keyphrasing folder
 from .keyphrasing.kpextraction import *
 from .outline.pdfoutliner import title_from_pdf
@@ -56,50 +57,90 @@ def require_internal(func):
 @csrf_exempt
 @require_internal
 def embed_document(request):
+    """ this function takes a url or a pdf and embeds it into the pinecone index
+    it also creates a new thread and a new document in the database
+    pdfs are converted to text and then embedded
+     """
+    if request.FILES.get("pdf") is not None:
+        # for pdfs, we need to extract the text from the pdf and then embed it
+        d = request.POST.dict() # get the data from the request
+        file_handler = FileUploadHandler(request.FILES.get('pdf')) # get the file handler
+        if file_handler:
 
-    d = json.loads(request.body)
-    
-    url = d.get('url').strip()
-    user_id = d.get('user') # make sure these exist elsewhere: ../api/views.py
 
-    # create a new thread for this request
-    new_id = uuid.uuid4().hex[:16]
-    while Thread.objects.filter(id=new_id).exists():
+            # embed the pdf file
+            pdf_text = pdfdchunks_file(request.FILES.get("pdf"))
+            # make sure the pdf was embedded and not empty
+            if pdf_text is not None:
+                print(file_handler)
+                user_id = int(d.get('user')) if d.get('user').isnumeric() else None
+                pdf_name = d.get('name')
+                print(type(str(pdf_name)), type(user_id))
+                new_id = uuid.uuid4().hex[:16]
+                while Thread.objects.filter(id=new_id).exists():
+                    new_id = uuid.uuid4().hex[:16]
+
+                thread = Thread(id=new_id, user_id=user_id)
+                thread.save()
+                threadid = thread.id
+                print(pdf_text, "pdf_text", pdf_name)
+                print("file complete", file_handler.file_complete, request.FILES.get('pdf'))
+                if len(Document.objects.filter(url=pdf_name)) != 0:
+                    return JsonResponse(
+                        {'detail': 'Document already embedded', 'document_id': Document.objects.get(url=pdf_name).id,
+                         'thread_id': threadid}, status=200)
+                doc = Document.objects.create(url=pdf_name, user_id=user_id, document_chunks=json.dumps(pdf_text), num_chunks=len(pdf_text))
+                doc.save()
+                doc.embed(index)
+                log_signal.send(sender=None, user_id=user_id, desc="User indexed new document")
+                return JsonResponse({'Detail':'Successfully indexed the document.', 'document_id': doc.id, 'thread_id': threadid}, status=200)
+                print("file complete", file_handler.file_complete, request.FILES.get('pdf'))
+            return JsonResponse({'Detail':'Failed to index the document.', 'thread_id': threadid}, status=400)
+    else:
+        d = json.loads(request.body)
+
+        url = d.get('url').strip()
+        user_id = d.get('user') # make sure these exist elsewhere: ../api/views.py
+
+        # create a new thread for this request
         new_id = uuid.uuid4().hex[:16]
+        while Thread.objects.filter(id=new_id).exists():
+            new_id = uuid.uuid4().hex[:16]
 
-    thread = Thread(id=new_id, user_id=user_id)
-    thread.save()
-    threadid = thread.id
+        thread = Thread(id=new_id, user_id=user_id)
+        thread.save()
+        threadid = thread.id
 
-    if not is_url(url):
-        return JsonResponse({'detail':'Invalid URL'}, status=400)
+        if not is_url(url) and not url.endswith('pdf'):
+            print("Invalid URL")
+            return JsonResponse({'detail':'Invalid URL'}, status=400)
+            
+        if len(Document.objects.filter(url=url)) != 0:
 
-    if len(Document.objects.filter(url=url)) != 0:
+             # load the document
+            doc = Document.objects.get(url=url)
 
-         # load the document
-        doc = Document.objects.get(url=url)
+             # check if the title is already there
+            if doc.title:
+                return JsonResponse({'detail':'Document already embedded', 'document_id': doc.id, 'thread_id':threadid, 'title': doc.title}, status=200)
 
-         # check if the title is already there
-        if doc.title:
-            return JsonResponse({'detail':'Document already embedded', 'document_id': doc.id, 'thread_id':threadid, 'title': doc.title}, status=200)
-        
-        # get the title
+            # get the title
+            title = title_from_pdf(url)
+
+            # update the document
+            doc.title = title
+            doc.save()
+
+            return JsonResponse({'detail':'Document already embedded', 'document_id': Document.objects.get(url=url).id, 'thread_id':threadid, 'title': Document.objects.get(url=url).title}, status=200)
+
+        pdf_text = pdftochunks_url(url) #extractpdf(url)
         title = title_from_pdf(url)
-
-        # update the document
-        doc.title = title
+        doc = Document.objects.create(url=url, user_id=user_id, document_chunks=json.dumps(pdf_text), num_chunks=len(pdf_text), title=title)
+        # print(pdf_text)
         doc.save()
-
-        return JsonResponse({'detail':'Document already embedded', 'document_id': Document.objects.get(url=url).id, 'thread_id':threadid, 'title': Document.objects.get(url=url).title}, status=200)
-
-    pdf_text = pdftochunks_url(url) #extractpdf(url)
-    title = title_from_pdf(url)
-    doc = Document.objects.create(url=url, user_id=user_id, document_chunks=json.dumps(pdf_text), num_chunks=len(pdf_text), title=title)
-    # print(pdf_text)
-    doc.save()
-    doc.embed(index)
-    log_signal.send(sender=None, user_id=user_id, desc="User indexed new document")
-    return JsonResponse({'Detail':'Successfully indexed the document.', 'document_id': doc.id, 'thread_id': threadid, 'title': title }, status=200)
+        doc.embed(index)
+        log_signal.send(sender=None, user_id=user_id, desc="User indexed new document")
+        return JsonResponse({'Detail':'Successfully indexed the document.', 'document_id': doc.id, 'thread_id': threadid, 'title': title }, status=200)
 
 # def matches_to_text(result):
 
@@ -160,10 +201,8 @@ def summarize_document(request):
     feedback = FeedbackModel.objects.create(qa=qa)
 
     if special_id:
-
         # simplify the last answer
         last_qa = associated_qas[-1]
-
         text = last_qa.txttosummarize
         last_question = last_qa.question
         last_answer = last_qa.answer

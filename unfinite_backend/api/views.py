@@ -533,7 +533,7 @@ def references(request):
 @requires_authentication
 def embed_document(request):
     pdf_file = request.FILES
-    if pdf_file is not None:
+    if pdf_file.get("pdf") is not None:
         pdf_name = str(pdf_file.get("pdf"))
         print(pdf_file)
         body = {'name': pdf_name, 'user': request.user.id}

@@ -182,4 +182,5 @@ AUTH_USER_MODEL = 'api.UnfiniteUser'
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # For file uploads
-FILE_UPLOAD_MAX_MEMORY_SIZE = 16777216  # 16MB in bytes
+FILE_UPLOAD_MAX_MEMORY_SIZE = 4194304
+MAX_UPLOAD_SIZE = 4194304
