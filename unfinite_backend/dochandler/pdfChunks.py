@@ -182,7 +182,7 @@ def pdftochunks(pdf_path):
 
 def pdfdchunks_file(file):
     output_string = io.StringIO()
-    in_file = io.BytesIO(file.read())
+    in_file = io.BytesIO(file)
     parser = PDFParser(in_file)
     doc = PDFDocument(parser)
     rsrcmgr = PDFResourceManager()

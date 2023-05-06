@@ -460,6 +460,29 @@ def title_from_pdf(url):
 
     return titletext
 
+def pdf_to_dict_from_file(file):
+    in_file = io.BytesIO(file)
+    doc = fitz.open(stream=in_file, filetype="pdf")
+
+    font_counts, styles = fonts(doc, granularity=True)
+
+    size_tag = font_tags(font_counts, styles, granularity=True)
+
+    elements = headers_para(doc, size_tag)
+    topscript_list = [elements.index(elem)+1 for elem in elements if elem['tag'] == '<p_break>'] # make list of first entries on page
+    topscript_list.pop(-1) # remove last, because there is no topscript on the next page after the last page
+    elements = pop_repeating(elements, topscript_list)
+    endscript_list = [elements.index(elem)-1 for elem in elements if elem['tag'] == '<p_break>'] # make list of last entries on page
+    elements = pop_repeating(elements, endscript_list)
+
+    # primary_heading = deter_primary_h(elements)
+    return elements
+
+def title_from_uploadedpdf(f):
+    parsedpdf = pdf_to_dict_from_file(f)
+    titletag, titletext = find_title(parsedpdf)
+    return titletext
+
 # if __name__ == '__main__':
 
 #     print(title_from_pdf('https://arxiv.org/pdf/2304.03262.pdf'))
