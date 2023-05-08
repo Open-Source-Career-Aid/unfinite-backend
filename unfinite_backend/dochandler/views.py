@@ -605,7 +605,7 @@ def summarize_document_stream(request):
     def stream_generator():
         for chunk in stream:
             # Encode each chunk as JSON
-            print('dochandler yielding chunk')
+            #print('dochandler yielding chunk')
             yield chunk
 
     chunk_size = 32
@@ -652,9 +652,9 @@ def get_outline(request):
 
     # get outline from doc
     outline = doc.outline
-
-    if len(outline) > 0:
-        return JsonResponse({'detail':outline}, status=200)
+    if outline is not None: #this has to be a nested if
+    	if len(outline) > 0:
+        	return JsonResponse({'detail':outline}, status=200)
 
     # get the outline
     generatedoutline = get_outline_from_text('\n'.join(chunks))
@@ -669,3 +669,14 @@ def get_outline(request):
 
     # return the outline
     return JsonResponse({'detail':json.dumps(outlinelist)}, status=200)
+
+
+@csrf_exempt
+@require_internal
+def get_doc_chunks(request):
+    d = json.loads(request.body)
+    doc_ids = d['ids']
+
+    docs = Document.objects.filter(id__in=doc_ids)
+    chunks = {doc.id: json.loads(doc.document_chunks) for doc in docs}
+    return JsonResponse({'docs': chunks}, status=200)

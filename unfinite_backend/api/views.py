@@ -710,7 +710,7 @@ def summarize_document_stream(request):
     def stream_response(response):
         for chunk in response.iter_content(chunk_size=32):
             if chunk:
-                print('api yielding chunk')
+                #print('api yielding chunk')
                 yield chunk
 
     # Forward the response as a streaming response
@@ -737,3 +737,29 @@ def get_recommendations(request):
         return JsonResponse(data={'detail': 'QueryHandler returned error'}, status=400)
     
     return JsonResponse(data=response.json(), status=200)
+
+
+@require_POST
+@requires_authentication
+def get_outline(request):
+
+    data = json.loads(request.body)
+
+    docid = data.get('docid')
+
+    if docid is None:
+        return JsonResponse({'detail':'failure'}, status=400)
+    
+    response = requests.post(f'{settings.DOCHANDLER_URL}get_outline/', headers={'Authorization': settings.QUERYHANDLER_KEY}, json=data)
+
+    if response.status_code != 200:
+        return JsonResponse(data={'detail': 'QueryHandler returned error'}, status=400)
+    
+    return JsonResponse(data=response.json(), status=200)
+
+@require_POST
+def get_doc_chunks(request):
+    if request.META.get("HTTP_AUTHORIZATION") != "0hIaJYDjNbQrOCDsMEH79NuWknVIe59PnafGjhS1xUQ":
+        return JsonResponse({'detail': 'not allowed'}, status=400)
+    data = json.loads(request.body)
+    return JsonResponse(data=requests.post(f'{settings.DOCHANDLER_URL}get_chunks/', headers={'Authorization': settings.QUERYHANDLER_KEY}, json=data).json(), status=200)

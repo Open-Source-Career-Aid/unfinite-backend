@@ -6,7 +6,7 @@ import pickle
 
 class Command(BaseCommand):
     def handle(self, **options):
-        docs = Documents.objects.all()
+        docs = Document.objects.all()
         data = {}
         for doc in docs:
             try:
