@@ -6,7 +6,9 @@ from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 import json, pinecone, openai
 from .processpdf import *
+from itertools import chain
 from api.signals import log_signal
+from django.db import models
 from .models import Document, Thread, QA, FeedbackModel
 import re
 import uuid
@@ -19,12 +21,32 @@ from .outline.pdfoutliner import title_from_uploadedpdf, title_from_pdf
 #from .LayeronePrompting import *
 from .arxivscraper import *
 from .outline.outlinefromLLM import *
+from .youtubescraper import *
+from .generalscraping import *
+from .langchainChains import *
+from .OpenAIprompts import *
 
 openai.api_key = settings.OPENAI_API_KEY
 pinecone.init(api_key=settings.PINECONE_KEY, environment="us-central1-gcp")
 index = pinecone.Index('unfinite-embeddings')
 
-special_prompts = {1: 'Simplify for someone who isn\'t knowledgeable in the field.\n Provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces.\nAnswer:', 2: 'Dumbsplain for a 5 year old kid.\n Provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces.\nAnswer:', 3: 'Talk extremely technical as you would to an academic.\n Provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces.\nAnswer:', 4: 'Use an analogy to answer the question.\n Provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces.\nAnswer:'}
+special_prompts = {1: 'Simplify for a non expert', 2: 'Dumbsplain', 3: 'Technical and quick explanation', 4: 'Analogy'}
+
+def scrape_youtube_and_save(url, user_id):
+    chunks = scrape_youtube(url)
+    d = Document.objects.create(url=url, title=url, user_id=user_id, document_chunks=json.dumps(chunks), num_chunks=len(chunks))
+    # embed
+    d.embed(index)
+    d.save()
+    return d
+
+def scrape_url_and_save(url, user_id):
+    chunks, title = make_chunks_from_url(url)
+    d = Document.objects.create(url=url, title=title, user_id=user_id, document_chunks=json.dumps(chunks), num_chunks=len(chunks))
+    # embed
+    d.embed(index)
+    d.save()
+    return d
 
 # a functuon that uses regex to verify that a text is a url
 def is_url(text):
@@ -134,12 +156,26 @@ def embed_document(request):
 
             return JsonResponse({'detail':'Document already embedded', 'document_id': Document.objects.get(url=url).id, 'thread_id':threadid, 'title': Document.objects.get(url=url).title}, status=200)
 
-        pdf_text = pdftochunks_url(url) #extractpdf(url)
-        title = title_from_pdf(url)
-        doc = Document.objects.create(url=url, user_id=user_id, document_chunks=json.dumps(pdf_text), num_chunks=len(pdf_text), title=title)
-        # print(pdf_text)
-        doc.save()
-        doc.embed(index)
+        # if url is a pdf or a youtube or a general url
+        if url.endswith('pdf'):
+            pdf_text = pdftochunks_url(url) #extractpdf(url)
+            title = title_from_pdf(url)
+            doc = Document.objects.create(url=url, user_id=user_id, document_chunks=json.dumps(pdf_text), num_chunks=len(pdf_text), title=title)
+            # print(pdf_text)
+            doc.save()
+            doc.embed(index)
+        elif url.startswith('https://www.youtube.com/watch?v='):
+            # youtube video
+            # video_id = url.split('=')[1]
+            # title = title_from_youtube(video_id)            
+            doc = scrape_youtube_and_save(url, user_id)
+            # title = d['title']
+            title = doc.title
+        else:
+            # general url
+            doc = scrape_url_and_save(url, user_id)
+            title = doc.title
+
         log_signal.send(sender=None, user_id=user_id, desc="User indexed new document")
         return JsonResponse({'Detail':'Successfully indexed the document.', 'document_id': doc.id, 'thread_id': threadid, 'title': title }, status=200)
 
@@ -150,7 +186,7 @@ def embed_document(request):
 
 #     return JsonResponse({'Detail':'Successfully indexed the document.', 'document_id': doc.id, 'thread_id':threadid}, status=200)
 
-def matches_to_text(result):
+def matches_to_text_old(result):
 
     # print(result)
     document_id = int(result['metadata']['document'])
@@ -474,7 +510,7 @@ def search_unfinite(request):
 @csrf_exempt
 @require_internal
 # TODO: change the name from summarize_document to something that makes more sense, e.g. answer_question
-def summarize_document_stream(request):
+def summarize_document_stream_OLD(request):
 
     d = json.loads(request.body)
 
@@ -603,7 +639,7 @@ def summarize_document_stream(request):
                     "document": {"$in": list(map(str, json.loads(docids)))},
                     "dev": {"$eq": not settings.IS_PRODUCTION},
                 },
-                top_k=5,
+                top_k=2,
                 include_metadata=True
             )
 
@@ -694,7 +730,11 @@ def get_outline(request):
     if len(outline) > 0:
         return JsonResponse({'detail':outline}, status=200)
 
-    # get the outline
+    # if the doc url is a youtube video
+    # if 'youtube.com' in doc.url:
+    #     generatedoutline = get_outline_from_text('\n'.join(json.loads(doc.document_chunks)[:5]))
+    # # get the outline
+    # else:
     generatedoutline = get_outline_from_text('\n'.join(chunks))
 
     # remove the '- ' from each line of the outline
@@ -707,3 +747,158 @@ def get_outline(request):
 
     # return the outline
     return JsonResponse({'detail':json.dumps(outlinelist)}, status=200)
+
+def matches_to_text(result):
+
+    # print(result)
+    document_id = int(result['metadata']['document'])
+    # print(document_id)
+    try:
+        chunk_number = int(result['metadata']['chunk'])
+    except:
+        return ""
+
+    try:
+        return json.loads(Document.objects.get(id=document_id).document_chunks)[chunk_number], document_id
+    except:
+        return None
+
+@csrf_exempt
+@require_internal
+# TODO: change the name from summarize_document to something that makes more sense, e.g. answer_question
+def summarize_document_stream(request):
+
+    d = json.loads(request.body)
+
+    threadid = d.get('threadid')
+    question = d.get('question')
+    docids = d.get('docids') # list of docids to search through
+    user_id = d.get('user')
+    special_id = d.get('specialID')
+
+    is_overview = False
+
+    response_type = 'simple and concise'
+    if question == "Overview":
+        is_overview = True
+        response_type = "overview: short and quick, 3-5 lines."
+
+    print("special_id", special_id)
+    if special_id:
+        response_type = special_prompts[special_id]
+    
+    ## vector search here, only through the docids
+    ## generate response and return it
+
+    # load thread
+    thread = Thread.objects.get(id=threadid)
+
+    # load the messages
+    messages = thread.get_promptmessages()
+
+    associated_qas = sorted(list(QA.objects.filter(thread=thread)), key = lambda x: x.index)
+
+    # create a new QA object
+    qa = QA.objects.create(thread=thread, question=question, index=len(associated_qas))
+
+    # create a new feedback model
+    feedback = FeedbackModel.objects.create(qa=qa)
+    
+    # TODO: save the question embeddings for future use
+    # if is_overview is False
+    if is_overview==False:
+
+        response = openai.Embedding.create(input=question, engine='text-embedding-ada-002')
+        question_embedding = response['data'][0]['embedding']
+
+        similar = index.query(
+            vector=question_embedding,
+            filter={
+                "document": {"$in": list(map(str, json.loads(docids)))},
+                "dev": {"$eq": not settings.IS_PRODUCTION},
+            },
+            top_k=5,
+            include_metadata=True
+        )
+        # print(similar)
+
+        text_to_summarize = list(map(matches_to_text, similar['matches']))
+        text_to_summarize = [x for x in text_to_summarize if x is not None]
+        print(text_to_summarize)
+        text = [x[0] for x in text_to_summarize if x is not None]
+        docids = [x[1] for x in text_to_summarize if x is not None]
+    else:
+        # get the first 2 chunks
+        text_to_summarize = json.loads(Document.objects.get(id=json.loads(docids)[0]).document_chunks)[:3]
+        print(text_to_summarize)
+        text = text_to_summarize
+        docids = [json.loads(docids)[0]]
+
+    # dict so that we can map docids to numbers
+    dociddict = {}
+    i = 1
+    for docid in docids:
+        if docid not in dociddict:
+            dociddict[docid] = i
+            i += 1
+
+    references = []
+    for docid in dociddict:
+        references.append(Document.objects.get(id=docid).url)
+    
+    print("references", references)
+
+    # print(text_to_summarize)
+    text = [x for x in text if x != '']
+    messages = get_messages(question=question, listoftexts=text, listofcorrespondingdocids=docids, dociddict=dociddict, responsetype=response_type)
+
+    def zero_or_one(x):
+        if x == 0:
+            return "user"
+        return "assistant"
+
+    messagestochat = [{'role': zero_or_one(x[0]), 'content': x[1]} for x in messages]
+    # print(messagestochat)
+    #if json.loads(docids)[0] == 458:
+    #    answer = gpt3_3turbo_completion(messagestochat, summarymodel="gpt-4")
+    #    print("did summarization with gpt-4")
+    qa.docids = docids
+    qa.user_id = user_id
+    qa.feedback = feedback
+    qa.txttosummarize = json.dumps(text_to_summarize)
+    qa.save()
+    stream = gpt3_3turbo_completion_stream(messagestochat, qa)
+    # stream = queryresponsepipeline(question=question, listoftexts=text_to_summarize, qa=qa, response_type=response_type)
+    thread.save()
+
+    def stream_generator():
+        answer = ''
+        # answer
+        for chunk in stream:
+            # Encode each chunk as JSON
+            if chunk[0]==1:
+                answer = json.loads(chunk[1])['data']
+            yield chunk[1]
+        # references
+        yield json.dumps({'finalresponse': 2, 'urls':['>>>PART<<<']})
+        yield '\n'
+        yield json.dumps({'finalresponse': 2, 'urls': references})
+        yield '\n'
+        # questions
+        yield json.dumps({'finalresponse': 2, 'urls':['>>>PART<<<']})
+        yield '\n'
+        questionsgenerator = questionspipeline(answer, qa)
+        # yield 'here'
+        for chunk in questionsgenerator:
+            yield chunk
+        # ending message
+        yield json.dumps({'finalresponse': 4, 'detail':'>>>END<<<'})
+        yield '\n'
+
+    chunk_size = 32
+
+    # return JsonResponse(data={'summary': summary, 'urls':s.urls, 'urlidx':s.urlidx, 'id': s.id, 'was_new':was_new}, status=200)
+    response =  StreamingHttpResponse(stream_generator(), content_type='application/json')
+    response.block_size = chunk_size
+
+    return response
