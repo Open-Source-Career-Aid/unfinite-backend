@@ -11,16 +11,31 @@ from .models import Document, Thread, QA, FeedbackModel
 import re
 import uuid
 from django.conf import settings
-from .pdfChunks import pdftochunks_url
+from .pdfChunks import pdftochunks_url, extract_text_from_pdf_url
 # import kpextraction.py from keyphrasing folder
 from .keyphrasing.kpextraction import *
 from .outline.pdfoutliner import title_from_pdf
 #from .LayeronePrompting import *
 from .arxivscraper import *
+from .pinecone_hybrid_search_retriever import PineconeHybridSearchRetriever, RemoteSparseEncoder
+from langchain.embeddings import OpenAIEmbeddings
+from langchain.text_splitter import CharacterTextSplitter, RecursiveCharacterTextSplitter
 
 openai.api_key = settings.OPENAI_API_KEY
-pinecone.init(api_key=settings.PINECONE_KEY, environment="us-central1-gcp")
-index = pinecone.Index('unfinite-embeddings')
+os.environ["OPENAI_API_KEY"] = settings.OPENAI_API_KEY
+pinecone.init(api_key=settings.PINECONE_KEY, environment=settings.PINECONE_ENV)
+embeddings = OpenAIEmbeddings()
+sparse = RemoteSparseEncoder(settings.MODEL_SERVER_URL, settings.MODEL_SERVER_KEY)
+index = pinecone.Index(settings.PINECONE_INDEX_NAME)
+
+retriever = PineconeHybridSearchRetriever(embeddings=embeddings, sparse_encoder=sparse, index=index)
+retriever.alpha = 0.7
+#text_splitter = CharacterTextSplitter.from_tiktoken_encoder(chunk_size=100, chunk_overlap=16)
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size = 512,
+    chunk_overlap  = 64,
+    length_function = len,
+)
 
 special_prompts = {1: 'Simplify for someone who isn\'t knowledgeable in the field.\n Provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces.\nAnswer:', 2: 'Dumbsplain for a 5 year old kid.\n Provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces.\nAnswer:', 3: 'Talk extremely technical as you would to an academic.\n Provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces.\nAnswer:', 4: 'Use an analogy to answer the question.\n Provide 3 follow up questions without answers for the user. Encapsulate each question between curly braces.\nAnswer:'}
 
@@ -80,7 +95,7 @@ def embed_document(request):
 
          # check if the title is already there
         if doc.title:
-            return JsonResponse({'detail':'Document already embedded', 'document_id': doc.id, 'thread_id':threadid, 'title': doc.title}, status=200)
+            return JsonResponse({'detail':'Document already embedded', 'document_id': doc.id, 'thread_id': threadid, 'title': doc.title}, status=200)
         
         # get the title
         title = title_from_pdf(url)
@@ -91,12 +106,14 @@ def embed_document(request):
 
         return JsonResponse({'detail':'Document already embedded', 'document_id': Document.objects.get(url=url).id, 'thread_id':threadid, 'title': Document.objects.get(url=url).title}, status=200)
 
-    pdf_text = pdftochunks_url(url) #extractpdf(url)
+    #pdf_text = pdftochunks_url(url) #extractpdf(url) # perhaps use langchain here
+    pdf = extract_text_from_pdf_url(url)
+    pdf_chunks = list(map(lambda x: x.page_content, text_splitter.create_documents([pdf])))
     title = title_from_pdf(url)
-    doc = Document.objects.create(url=url, user_id=user_id, document_chunks=json.dumps(pdf_text), num_chunks=len(pdf_text), title=title)
+    doc = Document.objects.create(url=url, user_id=user_id, document_chunks=json.dumps(pdf_chunks), num_chunks=len(pdf_chunks), title=title)
     # print(pdf_text)
     doc.save()
-    doc.embed(index)
+    doc.embed(retriever)
     log_signal.send(sender=None, user_id=user_id, desc="User indexed new document")
     return JsonResponse({'Detail':'Successfully indexed the document.', 'document_id': doc.id, 'thread_id': threadid, 'title': title }, status=200)
 
@@ -396,22 +413,24 @@ def search_unfinite(request):
     d = json.loads(request.body)
     query = d.get('query')
 
-    response = openai.Embedding.create(input=query, engine='text-embedding-ada-002')
-    query_embedding = response['data'][0]['embedding']
+    # response = openai.Embedding.create(input=query, engine='text-embedding-ada-002')
+    # query_embedding = response['data'][0]['embedding']
 
-    # get top 4 similar documents
-    similar = index.query(
-        vector=query_embedding,
-        filter={
-            "dev": {"$eq": not settings.IS_PRODUCTION},
-        },
-        top_k=50,
-        include_metadata=True
-    )
+    # # get top 4 similar documents
+    # similar = index.query(
+    #     vector=query_embedding,
+    #     filter={
+    #         "dev": {"$eq": not settings.IS_PRODUCTION},
+    #     },
+    #     top_k=50,
+    #     include_metadata=True
+    # )
+
+    relevant = retriever.get_relevant_documents(query)
 
     def gettitleandurl(result):
 
-        docid = result['metadata']['document']
+        docid = int(result.metadata['document'])
 
         doc = Document.objects.get(id=docid)
 
@@ -420,7 +439,7 @@ def search_unfinite(request):
     # print(similar)
 
     toreturn  = set()
-    for match in similar['matches']:
+    for match in relevant:
         # toreturn.append(gettitleandurl(match))\
         title, url = gettitleandurl(match)
         toreturn.add((title, url))
@@ -553,22 +572,24 @@ def summarize_document_stream(request):
         # TODO: save the question embeddings for future use
         # if is_overview is False
         if is_overview is False:
-            response = openai.Embedding.create(input=question, engine='text-embedding-ada-002')
-            question_embedding = response['data'][0]['embedding']
+            # response = openai.Embedding.create(input=question, engine='text-embedding-ada-002')
+            # question_embedding = response['data'][0]['embedding']
 
-            similar = index.query(
-                vector=question_embedding,
-                filter={
-                    "document": {"$in": list(map(str, json.loads(docids)))},
-                    "dev": {"$eq": not settings.IS_PRODUCTION},
-                },
-                top_k=5,
-                include_metadata=True
-            )
+            # similar = index.query(
+            #     vector=question_embedding,
+            #     filter={
+            #         "document": {"$in": list(map(str, json.loads(docids)))},
+            #         "dev": {"$eq": not settings.IS_PRODUCTION},
+            #     },
+            #     top_k=5,
+            #     include_metadata=True
+            # )
 
-            # print(similar)
+            # # print(similar)
 
-            text_to_summarize = list(map(matches_to_text, similar['matches']))
+            # text_to_summarize = list(map(matches_to_text, similar['matches']))
+            relevant = retriever.get_relevant_documents(question, doc_ids=json.loads(docids))
+            text_to_summarize = list(map(lambda x: x.page_content, relevant))
         else:
             # get the first 2 chunks
             text_to_summarize = json.loads(Document.objects.get(id=json.loads(docids)[0]).document_chunks)[:2]
@@ -613,6 +634,8 @@ def summarize_document_stream(request):
     response.block_size = chunk_size
 
     return response
+
+
 def get_recommendations(request):
 
     d = json.loads(request.body)

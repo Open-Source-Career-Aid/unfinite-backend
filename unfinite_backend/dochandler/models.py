@@ -46,21 +46,18 @@ class Document(models.Model):
             self.created = timezone.now()
         return super(Document, self).save(*args, **kwargs)
 
-    def embed(self, index):
+    def embed(self, retriever):
 
         chunk_texts = json.loads(self.document_chunks)
-        response = openai.Embedding.create(input=chunk_texts,engine='text-embedding-ada-002')
-        embeddings = response['data']
+        for_retriever = []
+        #doc_id = 10000 # would need to make one in DB to get this...
+        for i, doc in enumerate(chunk_texts):
+            for_retriever.append((doc, {'metadata': {'document': self.id, 'chunk': i, 'dev': not settings.IS_PRODUCTION}}))
 
-        f = lambda x: openai_to_pinecone(x, self.id)
-
-        to_upsert = map(f, embeddings)
-
-        for batch in batches(to_upsert):
-            index.upsert(batch)
-
+        retriever.add_texts(for_retriever)
         self.embedded = True
         self.save()
+        
 
     def scrape(self):
         chunks = pdftochunks_url(self.url)
