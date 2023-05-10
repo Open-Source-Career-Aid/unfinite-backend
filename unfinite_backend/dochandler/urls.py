@@ -13,5 +13,5 @@ urlpatterns = [
     path('summarize_document_stream/', views.summarize_document_stream, name='doc-answer-stream'),
     path('get_recommendations/', views.get_recommendations, name='get-recommendations'),
     path('get_outline/', views.get_outline, name='get-outline'),
-    path('get_chunks/', views.get_doc_chunks, name='get-chunks'),
+    # path('get_chunks/', views.get_doc_chunks, name='get-chunks'),
 ]

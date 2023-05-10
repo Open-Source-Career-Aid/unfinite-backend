@@ -32,5 +32,5 @@ urlpatterns = [
     path('summarize_document_stream/', views.summarize_document_stream, name='api-summarize-document-stream'),
     path('get_recommendations/', views.get_recommendations, name='api-get-recommendations'),
     path('get_outline/', views.get_outline, name='api-get-outline'),
-    path('get_chunks/', views.get_doc_chunks, name='api-get-chunks'),
+    # path('get_chunks/', views.get_doc_chunks, name='api-get-chunks'),
 ]
