@@ -4,7 +4,7 @@ from .models import Document, Thread, QA, FeedbackModel, QuestionEventLog
 # Register your models here.
 @admin.register(Document)
 class Document(admin.ModelAdmin):
-    list_display = ('title', 'url', 'num_chunks', 'created', 'user', 'embedded',)
+    list_display = ('url', 'num_chunks', 'created', 'user', 'title')
 
 @admin.register(Thread)
 class Thread(admin.ModelAdmin):
