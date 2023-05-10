@@ -10,10 +10,11 @@ openai.api_key = settings.OPENAI_API_KEY
 devstr = '' if settings.IS_PRODUCTION else 'dev-'
 
 # 0 = user, 1 = assistant
-messages = [[0, "You are an expert teacher."], [0, "Please use the following texts and provide a short and coherent answer to the question. Make the answer accessible, break it down into points and keep paragraphs short where you can."],
-            [0, "If someone asks a question, break it down into answer, explanation and examples."],
-    [0, """Instructions: 
-    1. If the attached text is not relevant, please say you couldn't find the answer."""]]
+# messages = [[0, "You are an expert teacher."], [0, "Please use the following texts and provide a short and coherent answer to the question. Make the answer accessible, break it down into points and keep paragraphs short where you can."],
+#             [0, "If someone asks a question, break it down into answer, explanation and examples."],
+#     [0, """Instructions: 
+#     1. If the attached text is not relevant, please say you couldn't find the answer."""]]
+messages = []
 
 def openai_to_pinecone(embedding, document_id):
     page = embedding['index']

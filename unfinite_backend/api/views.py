@@ -556,8 +556,8 @@ def embed_document(request):
             return JsonResponse({'detail':'failure'}, status=500)
         elif url.strip() == '':
             return JsonResponse({'detail':'failure'}, status=500)
-        elif url[-4:] != '.pdf' :
-            return JsonResponse({'detail':'failure'}, status=500)
+        # elif url[-4:] != '.pdf' :
+        #     return JsonResponse({'detail':'failure'}, status=500)
 
         data['user'] = request.user.id
         # print(data.get("file"))
