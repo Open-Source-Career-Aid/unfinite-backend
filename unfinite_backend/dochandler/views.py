@@ -13,7 +13,7 @@ from .models import Document, Thread, QA, FeedbackModel
 import re
 import uuid
 from django.conf import settings
-from .pdfChunks import pdftochunks_url, pdfdchunks_file
+from .pdfChunks import pdftochunks_url
 from django.core.files.uploadhandler import FileUploadHandler
 # import kpextraction.py from keyphrasing folder
 from .keyphrasing.kpextraction import *
