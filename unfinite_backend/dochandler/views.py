@@ -105,18 +105,18 @@ def embed_document(request):
             threadid = thread.id
             # make sure the pdf was embedded and not empty
             if pdf_text is not None:
-                print("file complete", content, "line 80")
+                # print("file complete", content, "line 80")
                 if len(Document.objects.filter(url=pdf_name)) != 0:
                     return JsonResponse(
                         {'detail': 'Document already embedded', 'document_id': Document.objects.get(url=pdf_name).id,
-                         'thread_id': threadid}, status=200)
+                         'thread_id': threadid, 'title': Document.objects.get(url=pdf_name).title}, status=200)
 
                 doc = Document.objects.create(url=pdf_name, user_id=user_id, document_chunks=json.dumps(pdf_text), num_chunks=len(pdf_text))
                 doc.title = title_from_uploadedpdf(content)
                 doc.save()
                 doc.embed(index)
                 log_signal.send(sender=None, user_id=user_id, desc="User indexed new document")
-                return JsonResponse({'Detail':'Successfully indexed the document.', 'document_id': doc.id, 'thread_id': threadid}, status=200)
+                return JsonResponse({'Detail':'Successfully indexed the document.', 'document_id': doc.id, 'thread_id': threadid, "title": doc.title}, status=200)
 
             return JsonResponse({'Detail':'Failed to index the document.', 'thread_id': threadid}, status=400)
     else:
@@ -153,9 +153,8 @@ def embed_document(request):
             # update the document
             doc.title = title
             doc.save()
-
             return JsonResponse({'detail':'Document already embedded', 'document_id': Document.objects.get(url=url).id, 'thread_id':threadid, 'title': Document.objects.get(url=url).title}, status=200)
-
+          
         # if url is a pdf or a youtube or a general url
         if url.endswith('pdf'):
             pdf_text = pdftochunks_url(url) #extractpdf(url)
@@ -175,7 +174,6 @@ def embed_document(request):
             # general url
             doc = scrape_url_and_save(url, user_id)
             title = doc.title
-
         log_signal.send(sender=None, user_id=user_id, desc="User indexed new document")
         return JsonResponse({'Detail':'Successfully indexed the document.', 'document_id': doc.id, 'thread_id': threadid, 'title': title }, status=200)
 
