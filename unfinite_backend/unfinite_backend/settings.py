@@ -13,28 +13,28 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 from pathlib import Path
 from dotenv import load_dotenv
 import os, openai
+
 load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-STATIC_ROOT= BASE_DIR / 'static/'
-#print(STATIC_ROOT)
+STATIC_ROOT = BASE_DIR / 'static/'
+# print(STATIC_ROOT)
 
 # STATICFILES_DIRS = [BASE_DIR / 'unfinitefront/unfinitebeta/build/static', BASE_DIR / 'unfinitefront/unfinitebeta/build/']
-#print(STATICFILE_DIRS)
+# print(STATICFILE_DIRS)
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = str(os.getenv('SECRET_KEY'))
-#SERPHOUSE_KEY = str(os.getenv('SCRAPING_KEY'))
+# SERPHOUSE_KEY = str(os.getenv('SCRAPING_KEY'))
 SCRAPING_KEY = str(os.getenv('SCRAPING_KEY'))
 
 # key for authentication between api and queryhandler
 QUERYHANDLER_KEY = str(os.getenv('QUERYHANDLER_KEY'))
 QUERYHANDLER_URL = str(os.getenv('QUERYHANDLER_URL'))
-
 
 DOCHANDLER_URL = str(os.getenv('DOCHANDLER_URL'))
 
@@ -50,7 +50,7 @@ MODEL_SERVER_KEY = str(os.getenv('MODEL_SERVER_KEY'))
 
 # CORS
 CORS_ALLOW_CREDENTIALS = True
-#CORS_ORIGIN_WHITELIST = ['http://localhost:3000', '3.135.226.130'] # For development of the front-end. Will be https://app.unfinite.co
+# CORS_ORIGIN_WHITELIST = ['http://localhost:3000', '3.135.226.130'] # For development of the front-end. Will be https://app.unfinite.co
 
 # NOTE: hopefully default cache is fine for django-ratelimit?
 
@@ -61,19 +61,18 @@ IS_PRODUCTION = False
 
 ALLOWED_HOSTS = ['app.unfinite.co', 'localhost', '3.19.61.62', '127.0.0.1', '3.135.226.130']
 
-#CSRF_COOKIE_SAMESITE = 'Strict'
+# CSRF_COOKIE_SAMESITE = 'Strict'
 SESSION_COOKIE_SAMESITE = 'Strict'
 CSRF_COOKIE_HTTPONLY = False  # if frontend served seperately, this is True
 # SESSION_COOKIE_HTTPONLY = True
 
-#CSRF_HEADER_NAME = "HTTP_X_CSRFTOKEN"
+# CSRF_HEADER_NAME = "HTTP_X_CSRFTOKEN"
 CORS_ORIGIN_WHITELIST = ['http://localhost:3000']
-CSRF_TRUSTED_ORIGINS = ['https://app.unfinite.co', 'http://localhost:3000'] # For dev. prod: https://app.unfinite.co
+CSRF_TRUSTED_ORIGINS = ['https://app.unfinite.co', 'http://localhost:3000']  # For dev. prod: https://app.unfinite.co
 
 # Enable for production, forces HTTPS for cookies:
 # CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_SECURE = not DEBUG
-
 
 # Application definition
 
@@ -84,7 +83,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'corsheaders', # For CORS stuff
+    'corsheaders',  # For CORS stuff
     'api',
     'queryhandler',
     'import_export',
@@ -94,10 +93,10 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     "whitenoise.middleware.WhiteNoiseMiddleware",
-    'corsheaders.middleware.CorsMiddleware', # CORS stuff
+    'corsheaders.middleware.CorsMiddleware',  # CORS stuff
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    #'django.middleware.csrf.CsrfViewMiddleware',
+    # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -115,9 +114,9 @@ TEMPLATES = [
         'DIRS': t,
         'APP_DIRS': True,
         'OPTIONS': {
-            #'sql_mode': 'traditional',
-            #'isolation_level': 'read committed',
-            #'charset': 'utf8mb4',
+            # 'sql_mode': 'traditional',
+            # 'isolation_level': 'read committed',
+            # 'charset': 'utf8mb4',
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
@@ -130,7 +129,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'unfinite_backend.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 
@@ -138,13 +136,12 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
-	#'USER': os.getenv('DB_USER'),
-	#'PASSWORD': os.getenv('DB_PASSWORD'), #put this stuff in .env
-	#'HOST': os.getenv('DB_HOST'),
-	#'PORT': '3306',
+        # 'USER': os.getenv('DB_USER'),
+        # 'PASSWORD': os.getenv('DB_PASSWORD'), #put this stuff in .env
+        # 'HOST': os.getenv('DB_HOST'),
+        # 'PORT': '3306',
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
@@ -164,7 +161,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/4.1/topics/i18n/
 
@@ -176,7 +172,6 @@ USE_I18N = True
 
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
 
@@ -187,7 +182,10 @@ STATIC_URL = '/static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-
 AUTH_USER_MODEL = 'api.UnfiniteUser'
 
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+# For file uploads
+FILE_UPLOAD_MAX_MEMORY_SIZE = 4194304
+MAX_UPLOAD_SIZE = 4194304

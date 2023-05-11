@@ -7,6 +7,7 @@ import io
 import numpy as np
 import requests
 from .keyphrasing.kpextraction import *
+from .langchainChains import *
 
 # enter openai api key here
 
@@ -141,8 +142,8 @@ def gpt3_3turbo_completion_stream(messages, qa, summarymodel='gpt-3.5-turbo'):
 				qa.relevantquestions = json.dumps(questions)
 				qa.save()
 				print('this is being returned')
-				yield json.dumps({"finalresponse": 1, "data": answer + ''.join(questions)})
-				yield '\n'
+				yield (1, json.dumps({"finalresponse": 1, "data": answer}))
+				yield (0, '\n')
 				continue
 			if chunk.choices[0].delta.role == 'assistant':
 				continue
@@ -157,8 +158,8 @@ def gpt3_3turbo_completion_stream(messages, qa, summarymodel='gpt-3.5-turbo'):
 			finalsummary += c
 
 		# print(chunk.choices[0].delta.content)
-		yield json.dumps({'data':chunk, 'finalresponse':0})
-		yield '\n'
+		yield (0, json.dumps({'data':chunk, 'finalresponse':0}))
+		yield (0, '\n')
 		# response.flush()
 
 def similarity(v1, v2):  # return dot product of two vectors

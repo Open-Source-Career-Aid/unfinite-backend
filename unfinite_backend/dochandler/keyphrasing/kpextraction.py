@@ -1,3 +1,5 @@
+import re
+
 # # Model parameters
 # from transformers import (
 #     Text2TextGenerationPipeline,
@@ -71,7 +73,13 @@ def match_keyphrases(text):
     for kp in keyphrases:
         if count[kp] > 1:
             continue
+        # if kp starts and ends with []
+        if kp.startswith('[') and kp.endswith(']'):
+            continue
         text = text.replace(kp, '<kp>'+kp+'</kp>')
+    
+    # if there is a pattern like <kp>something<kp>something</kp>something</kp>, make it <kp>something something something</kp>
+    text = re.sub(r'<kp>(.*?)<kp>(.*?)</kp>(.*?)</kp>', r'<kp>\1 \2 \3</kp>', text)
 
     return text
 

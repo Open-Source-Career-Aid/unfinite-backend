@@ -529,27 +529,43 @@ def references(request):
     # print(response.content)
     return JsonResponse(data=urls, status=200)
 
-
+@require_POST
 @requires_authentication
 def embed_document(request):
+    pdf_file = request.FILES
+    if pdf_file.get("pdf") is not None:
+        pdf_name = str(pdf_file.get("pdf"))
+        print(pdf_file)
+        body = {'name': pdf_name, 'user': request.user.id}
+        print(body)
 
-    data = json.loads(request.body)
+        response = requests.post(f'{settings.DOCHANDLER_URL}embed_document/',
+                                 headers={'Authorization': settings.QUERYHANDLER_KEY},stream=True, files=pdf_file, data=body)
 
-    url = data.get('url')
-    if url is None:
-        return JsonResponse({'detail':'failure'}, status=500)
-    elif url.strip() == '':
-        return JsonResponse({'detail':'failure'}, status=500)
-    elif url[-4:] != '.pdf':
-        return JsonResponse({'detail':'failure'}, status=500)
+        if response.status_code != 200:
+            return JsonResponse(data={'detail': 'QueryHandler returned error'}, status=400)
+        return JsonResponse(data=response.json(), status=200)
+    else:
+        data = json.loads(request.body)
+        url = data.get('url')
+        print(data)
 
-    data['user'] = request.user.id
+        if url == "upload":
+            pass
+        elif url is None:
+            return JsonResponse({'detail':'failure'}, status=500)
+        elif url.strip() == '':
+            return JsonResponse({'detail':'failure'}, status=500)
+        # elif url[-4:] != '.pdf' :
+        #     return JsonResponse({'detail':'failure'}, status=500)
 
-    response = requests.post(f'{settings.DOCHANDLER_URL}embed_document/', headers={'Authorization': settings.QUERYHANDLER_KEY}, json=data)
+        data['user'] = request.user.id
+        # print(data.get("file"))
+        response = requests.post(f'{settings.DOCHANDLER_URL}embed_document/', headers={'Authorization': settings.QUERYHANDLER_KEY}, json=data)
 
-    if response.status_code != 200:
-        return JsonResponse(data={'detail': 'QueryHandler returned error'}, status=400)
-    return JsonResponse(data=response.json(), status=200)
+        if response.status_code != 200:
+            return JsonResponse(data={'detail': 'QueryHandler returned error'}, status=400)
+        return JsonResponse(data=response.json(), status=200)
 
 
 @requires_authentication
@@ -732,6 +748,24 @@ def get_recommendations(request):
         return JsonResponse({'detail':'failure'}, status=400)
     
     response = requests.post(f'{settings.DOCHANDLER_URL}get_recommendations/', headers={'Authorization': settings.QUERYHANDLER_KEY}, json=data)
+
+    if response.status_code != 200:
+        return JsonResponse(data={'detail': 'QueryHandler returned error'}, status=400)
+    
+    return JsonResponse(data=response.json(), status=200)
+
+@require_POST
+@requires_authentication
+def get_outline(request):
+
+    data = json.loads(request.body)
+
+    docid = data.get('docid')
+
+    if docid is None:
+        return JsonResponse({'detail':'failure'}, status=400)
+    
+    response = requests.post(f'{settings.DOCHANDLER_URL}get_outline/', headers={'Authorization': settings.QUERYHANDLER_KEY}, json=data)
 
     if response.status_code != 200:
         return JsonResponse(data={'detail': 'QueryHandler returned error'}, status=400)

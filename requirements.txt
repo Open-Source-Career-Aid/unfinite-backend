@@ -27,3 +27,4 @@ arxivscraper
 jellyfish
 PyMuPDF
 pinecone-text
+langchain
