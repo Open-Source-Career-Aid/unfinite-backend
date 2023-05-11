@@ -5,9 +5,9 @@ from selenium.webdriver.chrome.options import Options
 from urllib.parse import urljoin
 from langdetect import detect
 
-# chrome_options = Options()
-# chrome_options.add_argument('--headless')
-# driver = webdriver.Chrome('../chromedriver', options=chrome_options)
+chrome_options = Options()
+chrome_options.add_argument('--headless')
+driver = webdriver.Chrome('chromedriver', options=chrome_options)
 
 def contentfinder(url, driver):
 
@@ -30,9 +30,8 @@ def contentfinder(url, driver):
         if "javascript" in soup.find("html").get("class", []):
             # Use Selenium to load the JavaScript content and get the page source
             #driver = webdriver.Chrome()
-            # driver.get(url)
-            # html = driver.page_source
-            return None, None, None
+            driver.get(url)
+            html = driver.page_source
         else:
             html = requests.get(url).text
     except Exception:
@@ -64,7 +63,7 @@ def contentfinder(url, driver):
     # Returns the parsed article content
     return article, title, lang
 
-def find_title(url):
+def find_title(url, driver=driver):
     # Send a GET request to the URL and parse the HTML content with BeautifulSoup
     headers = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:55.0) Gecko/20100101 Firefox/55.0',
@@ -77,9 +76,8 @@ def find_title(url):
         if "javascript" in soup.find("html").get("class", []):
             # Use Selenium to load the JavaScript content and get the page source
             #driver = webdriver.Chrome()
-            # driver.get(url)
-            # html = driver.page_source
-            return None
+            driver.get(url)
+            html = driver.page_source
         else:
             html = requests.get(url).text
     except Exception:
@@ -91,9 +89,9 @@ def find_title(url):
     # Returns the parsed article content
     return title
 
-def make_chunks_from_url(url):
+def make_chunks_from_url(url, driver=driver):
 
-    content, title, language = contentfinder(url)
+    content, title, language = contentfinder(url, driver)
 
     content = content.get_text()
     
