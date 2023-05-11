@@ -5,9 +5,9 @@ from selenium.webdriver.chrome.options import Options
 from urllib.parse import urljoin
 from langdetect import detect
 
-chrome_options = Options()
-chrome_options.add_argument('--headless')
-driver = webdriver.Chrome('../chromedriver', options=chrome_options)
+# chrome_options = Options()
+# chrome_options.add_argument('--headless')
+# driver = webdriver.Chrome('../chromedriver', options=chrome_options)
 
 def contentfinder(url, driver):
 
