@@ -51,7 +51,7 @@ def scrape_youtube_and_save(url, user_id):
     chunks = scrape_youtube(url)
     d = Document.objects.create(url=url, title=url, user_id=user_id, document_chunks=json.dumps(chunks), num_chunks=len(chunks))
     # embed
-    d.embed(index)
+    d.embed(retriever)
     d.save()
     return d
 
@@ -59,7 +59,7 @@ def scrape_url_and_save(url, user_id):
     chunks, title = make_chunks_from_url(url)
     d = Document.objects.create(url=url, title=title, user_id=user_id, document_chunks=json.dumps(chunks), num_chunks=len(chunks))
     # embed
-    d.embed(index)
+    d.embed(retriever)
     d.save()
     return d
 
