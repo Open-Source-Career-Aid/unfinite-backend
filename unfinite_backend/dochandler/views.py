@@ -129,7 +129,7 @@ def embed_document(request):
                 doc = Document.objects.create(url=pdf_name, user_id=user_id, document_chunks=json.dumps(pdf_text), num_chunks=len(pdf_text))
                 doc.title = title_from_uploadedpdf(content)
                 doc.save()
-                doc.embed(index)
+                doc.embed(retriever)
                 log_signal.send(sender=None, user_id=user_id, desc="User indexed new document")
                 return JsonResponse({'Detail':'Successfully indexed the document.', 'document_id': doc.id, 'thread_id': threadid, "title": doc.title}, status=200)
 
