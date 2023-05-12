@@ -48,15 +48,11 @@ text_splitter = RecursiveCharacterTextSplitter(
 special_prompts = {1: 'Simplify for a non expert', 2: 'Dumbsplain', 3: 'Technical and quick explanation', 4: 'Analogy'}
 
 def scrape_youtube_and_save(url, user_id):
-    print('scraping youtube')
     chunks = scrape_youtube(url)
-    print('scraped youtube')
     d = Document.objects.create(url=url, title=url, user_id=user_id, document_chunks=json.dumps(chunks), num_chunks=len(chunks))
     d.save()
-    print('created document')
     # embed
     d.embed(retriever)
-    print('embedded')
     return d
 
 def scrape_url_and_save(url, user_id):
@@ -103,9 +99,7 @@ def embed_document(request):
     pdfs are converted to text and then embedded
      """
     file = request.FILES.get("pdf")
-    print(1)
     if file is not None:
-        print(2)
         # for pdfs, we need to extract the text from the pdf and then embed it
         d = request.POST.dict() # get the data from the request
         handler = FileUploadHandler(request=request)
@@ -113,7 +107,6 @@ def embed_document(request):
         content = file.read()
         handler.upload_complete()
         if content:
-            print(3)
             # embed the pdf file
             pdf_text = pdfdchunks_file(content)
             user_id = int(d.get('user')) if d.get('user').isnumeric() else None
@@ -127,10 +120,8 @@ def embed_document(request):
             threadid = thread.id
             # make sure the pdf was embedded and not empty
             if pdf_text is not None:
-                print(4)
                 # print("file complete", content, "line 80")
                 if len(Document.objects.filter(url=pdf_name)) != 0:
-                    print(5)
                     return JsonResponse(
                         {'detail': 'Document already embedded', 'document_id': Document.objects.get(url=pdf_name).id,
                          'thread_id': threadid, 'title': Document.objects.get(url=pdf_name).title}, status=200)
@@ -144,7 +135,6 @@ def embed_document(request):
 
             return JsonResponse({'Detail':'Failed to index the document.', 'thread_id': threadid}, status=400)
     else:
-        print(6)
         d = json.loads(request.body)
 
         url = d.get('url').strip()
@@ -160,12 +150,10 @@ def embed_document(request):
         threadid = thread.id
 
         if not is_url(url) and not url.endswith('pdf'):
-            print(7)
             print("Invalid URL")
             return JsonResponse({'detail':'Invalid URL'}, status=400)
             
         if len(Document.objects.filter(url=url)) != 0:
-            print(8)
 
              # load the document
             doc = Document.objects.get(url=url)
@@ -184,7 +172,6 @@ def embed_document(request):
           
         # if url is a pdf or a youtube or a general url
         if url.endswith('pdf'):
-            print(9)
             pdf = extract_text_from_pdf_url(url)
             pdf_chunks = list(map(lambda x: x.page_content, text_splitter.create_documents([pdf])))
             title = title_from_pdf(url)
@@ -193,7 +180,6 @@ def embed_document(request):
             doc.save()
             doc.embed(retriever)
         elif url.startswith('https://www.youtube.com/watch?v='):
-            print(10)
             # youtube video
             # video_id = url.split('=')[1]
             # title = title_from_youtube(video_id)            
@@ -201,7 +187,6 @@ def embed_document(request):
             # title = d['title']
             title = doc.title
         else:
-            print(11)
             # general url
             doc = scrape_url_and_save(url, user_id)
             title = doc.title

@@ -50,17 +50,13 @@ class Document(models.Model):
 
     def embed(self, retriever):
 
-        print('embedding')
         chunk_texts = json.loads(self.document_chunks)
-        print('chunk_texts', len(chunk_texts))
         for_retriever = []
         #doc_id = 10000 # would need to make one in DB to get this...
         for i, doc in enumerate(chunk_texts):
             for_retriever.append((doc, {'metadata': {'document': self.id, 'chunk': i, 'dev': not settings.IS_PRODUCTION}}))
 
-        print('for_retriever', len(for_retriever))
         retriever.add_texts(for_retriever)
-        print('added texts')
         self.embedded = True
         self.save()
         
