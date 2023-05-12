@@ -48,10 +48,14 @@ text_splitter = RecursiveCharacterTextSplitter(
 special_prompts = {1: 'Simplify for a non expert', 2: 'Dumbsplain', 3: 'Technical and quick explanation', 4: 'Analogy'}
 
 def scrape_youtube_and_save(url, user_id):
+    print('scraping youtube')
     chunks = scrape_youtube(url)
+    print('scraped youtube')
     d = Document.objects.create(url=url, title=url, user_id=user_id, document_chunks=json.dumps(chunks), num_chunks=len(chunks))
+    print('created document')
     # embed
     d.embed(retriever)
+    print('embedded')
     d.save()
     return d
 
