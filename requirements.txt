@@ -26,4 +26,7 @@ pandas
 arxivscraper
 jellyfish
 PyMuPDF
+pinecone-text
 langchain
+youtube-transcript-api
+tiktoken
