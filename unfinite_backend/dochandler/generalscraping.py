@@ -54,9 +54,14 @@ def contentfinder(url, driver):
         article = soup.find("main")
 
     # If the <article>, <div>, <section>, or <main> tags are not found, use a content extraction library
+    # if not article:
+    #     doc = Document(response.text)
+    #     article = BeautifulSoup(doc.summary(html_partial=True), "html.parser")
+
+    # If the <article>, <div>, <section>, <main>, or content extraction library are not found, use the <body> tag
     if not article:
-        doc = Document(response.text)
-        article = BeautifulSoup(doc.summary(html_partial=True), "html.parser")
+        article = soup.find("body")
+    
     
     driver.quit()
 
