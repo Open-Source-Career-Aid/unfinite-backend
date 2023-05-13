@@ -48,6 +48,9 @@ PINECONE_INDEX_NAME = str(os.getenv('PINECONE_INDEX_NAME'))
 MODEL_SERVER_URL = str(os.getenv('MODEL_SERVER_URL'))
 MODEL_SERVER_KEY = str(os.getenv('MODEL_SERVER_KEY'))
 
+GOOGLE_API_KEY = os.environ['GOOGLE_API_KEY']
+GOOGLE_CSE_ID = os.environ['GOOGLE_CSE_ID']
+
 # CORS
 CORS_ALLOW_CREDENTIALS = True
 # CORS_ORIGIN_WHITELIST = ['http://localhost:3000', '3.135.226.130'] # For development of the front-end. Will be https://app.unfinite.co

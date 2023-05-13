@@ -23,6 +23,8 @@ from .arxivscraper import *
 from .pinecone_hybrid_search_retriever import PineconeHybridSearchRetriever, RemoteSparseEncoder
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.text_splitter import CharacterTextSplitter, RecursiveCharacterTextSplitter
+from langchain.llms import OpenAI
+from langchain.agents import load_tools, initialize_agent
 from .outline.outlinefromLLM import *
 from .youtubescraper import *
 from .generalscraping import *
@@ -919,5 +921,14 @@ def summarize_document_stream(request):
     # return JsonResponse(data={'summary': summary, 'urls':s.urls, 'urlidx':s.urlidx, 'id': s.id, 'was_new':was_new}, status=200)
     response =  StreamingHttpResponse(stream_generator(), content_type='application/json')
     response.block_size = chunk_size
+
+    # If answer not found, run web search
+    if [answer] == "":
+        llm = OpenAI(temperature=0)
+        tool_names = ["google-search"]
+        tools = load_tools(tool_names)
+        agent = initialize_agent(tools, llm, agent="zero-shot-react-description", verbose=True)
+
+        web_search_answer = agent.run("Explain how a vision transformer works")
 
     return response
