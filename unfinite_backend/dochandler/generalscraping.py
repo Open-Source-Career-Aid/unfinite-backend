@@ -9,7 +9,7 @@ chrome_options = Options()
 chrome_options.add_argument('--headless')
 driver = webdriver.Chrome('chromedriver', options=chrome_options)
 
-def contentfinder(url, driver):
+def contentfinder(url, driver=driver):
 
     ## should be set up in the main script
     # ==========

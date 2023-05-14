@@ -740,6 +740,9 @@ def get_outline(request):
     # get the document
     doc = Document.objects.get(id=docid)
 
+    # get the url
+    url = doc.url
+
     # take the first two chunks
     chunks = json.loads(doc.document_chunks)[:2]
 
@@ -748,6 +751,40 @@ def get_outline(request):
 
     if len(outline) > 0:
         return JsonResponse({'detail':outline}, status=200)
+    
+    # check if it is a url using re
+    if re.match(r'^https?:/{2}\w.+$', url) is not None:
+
+        # if the url is not a youtube video
+        if 'youtube' not in url:
+
+            print("scraping url: ", url)
+
+            # scrape the url
+            try:
+                article = contentfinder(url)[0]
+            except Exception as e:
+                print(e)
+                pass
+            
+            # get the headings using bs4
+            headings = article.find_all(re.compile(r'^h[1-6]$'))
+
+            # list the headings
+            headings = [[x.text, x.text] for x in headings]
+
+            # remove the first heading if it is the title
+            if headings[0] == doc.title:
+                headings = headings[1:]
+
+            # save the outline in the document
+            doc.outline = json.dumps(headings)
+            doc.save()
+
+            # return the outline
+            if len(headings) > 0:
+                print("returning outline", headings)
+                return JsonResponse({'detail':json.dumps(headings)}, status=200)
 
     # if the doc url is a youtube video
     # if 'youtube.com' in doc.url:
@@ -833,7 +870,8 @@ def summarize_document_stream(request):
         similar = index.query(
             vector=question_embedding,
             filter={
-                "document": {"$in": list(map(str, json.loads(docids)))},
+                # "document": {"$in": list(map(str, json.loads(docids)))},
+                "document": {"$in": json.loads(docids)},
                 "dev": {"$eq": not settings.IS_PRODUCTION},
             },
             top_k=5,
@@ -843,7 +881,10 @@ def summarize_document_stream(request):
 
         text_to_summarize = list(map(matches_to_text, similar['matches']))
         text_to_summarize = [x for x in text_to_summarize if x is not None]
-        print(text_to_summarize)
+        # if there are no matches, summarize the first 3 chunks
+        if len(''.join([x[0] for x in text_to_summarize])) < 10:
+            text_to_summarize = json.loads(Document.objects.get(id=json.loads(docids)[0]).document_chunks)[:3]
+        # print(text_to_summarize)
         text = [x[0] for x in text_to_summarize if x is not None]
         docids = [x[1] for x in text_to_summarize if x is not None]
     else:
