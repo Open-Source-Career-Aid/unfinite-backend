@@ -62,5 +62,83 @@ def get_outline_from_text(text, messages=messages):
     messagestochat = [{'role': zero_or_one(x[0]), 'content': x[1]} for x in messagestemp]
 
     outline = gpt3_5turbo_completion(messagestochat)
+    
+	# remove the '- ' from each line of the outline
+    outlinelist = [x[2:] for x in outline.split('\n')]
+    outlinelist = [x.split(': ') for x in outlinelist if x != '']
 
     return outline
+
+def get_outline_from_pdf_chunks(pdf_chunks):
+
+	abstract = ''
+
+	for chunk in pdf_chunks:
+		# Get abstract
+		if "abstract" in chunk.lower():
+			abstract_start = chunk[
+				chunk.lower().index("abstract"):
+			]
+			try:
+				abstract = abstract_start[
+					:abstract_start.lower().index(".\n")
+				]
+			except:
+				abstract = abstract_start
+		
+		if abstract != '':
+			break
+	
+	# For get all lines which might be headers
+	poss_outline_lines = []
+	for chunk in pdf_chunks:
+		for line in chunk.split('\n'):
+            # Shorten each line
+			line = line[:100].lower()
+			if (10 < len(line) < 100) and (0 < len(line.split(" ")) < 5):
+				if sum([c.isalpha() for c in line]) / len(line) > 0.7\
+                    and not any([x in line.replace(".", "") for x in ("et al", "@")]):
+					poss_outline_lines.append(line)
+	
+	poss_outline_lines = [x for x in poss_outline_lines if poss_outline_lines.count(x) == 1]
+
+    # Generate prompt
+	lines = '\n'.join(poss_outline_lines[:80])
+    
+    #poop
+
+	prompt = f"""
+    Here is an abstract and rough extraction of lines from a research paper which may or may not be a section header.
+    Remember that not all lines are relevant for an outline so ignore some!
+
+    Abstract:
+    {abstract}
+
+    Possible outline lines:
+    {lines}
+
+    Give me a concise outline of the paper with just a few words per line. Just respond with the outline.
+    """.strip("\n")
+
+	response = openai.ChatCompletion.create(
+      model="gpt-3.5-turbo",
+      messages=[
+          {"role": "system", "content": "You are a helpful research paper analysis assistant."},
+          {"role": "user", "content": prompt}
+      ]
+    )
+
+	rawoutline = response["choices"][0]["message"]["content"]
+
+	# break into lines
+	outlinelist = rawoutline.split('\n')
+
+	# remove any numbering or bullets and strip whitespace
+	outlinelist = [' '.join(x.split(' ')[1:]) for x in outlinelist]
+
+	# remove any empty lines
+	outlinelist = [x for x in outlinelist if x != '']
+
+	outline = [[x, x] for x in outlinelist]
+
+	return outline
