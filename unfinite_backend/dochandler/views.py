@@ -744,7 +744,7 @@ def get_outline(request):
     url = doc.url
 
     # take the first two chunks
-    chunks = json.loads(doc.document_chunks)[:2]
+    chunks = json.loads(doc.document_chunks)
 
     # get outline from doc
     outline = doc.outline
@@ -755,8 +755,11 @@ def get_outline(request):
     # check if it is a url using re
     if re.match(r'^https?:/{2}\w.+$', url) is not None:
 
+        # if it is a pdf url then break the if statement
+        if '.pdf' in url:
+            pass
         # if the url is not a youtube video
-        if 'youtube' not in url:
+        elif 'youtube' not in url:
 
             print("scraping url: ", url)
 
@@ -791,11 +794,15 @@ def get_outline(request):
     #     generatedoutline = get_outline_from_text('\n'.join(json.loads(doc.document_chunks)[:5]))
     # # get the outline
     # else:
-    generatedoutline = get_outline_from_text('\n'.join(chunks))
 
-    # remove the '- ' from each line of the outline
-    outlinelist = [x[2:] for x in generatedoutline.split('\n')]
-    outlinelist = [x.split(': ') for x in outlinelist if x != '']
+    # it the url is a youtube video
+    if 'youtube.com' in url:
+        outlinelist = get_outline_from_text('\n'.join(chunks[0:3]))
+        doc.outline = json.dumps(outlinelist)
+        doc.save()
+        return JsonResponse({'detail':json.dumps(outlinelist)}, status=200)
+
+    outlinelist = get_outline_from_pdf_chunks(chunks)
 
     # save the outline in the document
     doc.outline = json.dumps(outlinelist)
