@@ -923,12 +923,15 @@ def summarize_document_stream(request):
     response.block_size = chunk_size
 
     # If answer not found, run web search
-    if [answer] == "":
+    def run_web_search(question):
         llm = OpenAI(temperature=0)
         tool_names = ["google-search"]
         tools = load_tools(tool_names)
         agent = initialize_agent(tools, llm, agent="zero-shot-react-description", verbose=True)
-
-        web_search_answer = agent.run("Explain how a vision transformer works")
+        return agent.run(question)
+    
+    # if answer == 'I cannot find an answer to your question. Please try again.':
+    #     web_result_answer = run_web_search(question)
+    #     (return answer formatted as json)
 
     return response
