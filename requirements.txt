@@ -30,3 +30,6 @@ pinecone-text
 langchain
 youtube-transcript-api
 tiktoken
+channels==3.0.5
+channels-redis
+channels daphne

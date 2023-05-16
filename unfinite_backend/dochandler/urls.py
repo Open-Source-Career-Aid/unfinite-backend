@@ -1,4 +1,7 @@
 from django.urls import path
+from django.urls import re_path
+from django.conf.urls import include
+from . import routing
 
 from . import views
 
@@ -13,4 +16,5 @@ urlpatterns = [
     path('summarize_document_stream/', views.summarize_document_stream, name='doc-answer-stream'),
     path('get_recommendations/', views.get_recommendations, name='get-recommendations'),
     path('get_outline/', views.get_outline, name='get-outline'),
+    re_path(r'ws/', include(routing.websocket_urlpatterns)),
 ]

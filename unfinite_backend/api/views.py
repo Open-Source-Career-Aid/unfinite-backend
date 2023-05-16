@@ -9,6 +9,8 @@ from django.conf import settings
 from django_ratelimit.decorators import ratelimit
 from .models import Query, SERP, Feedback, SERPFeedback, Completion
 from .signals import log_signal
+import channels
+from channels.http import AsgiHandler
 
 def requires_authentication(func):
     # an nice little wrapper to require users to be logged in
@@ -771,3 +773,17 @@ def get_outline(request):
         return JsonResponse(data={'detail': 'QueryHandler returned error'}, status=400)
     
     return JsonResponse(data=response.json(), status=200)
+
+def proxy_websocket_dochandler(request, room_name):
+
+    d = json.loads(request.body)
+    user = d.get('user')
+
+    # authenticate user
+    if user is None:
+        return JsonResponse({'detail':'failure'}, status=400)
+
+    print('here')
+    # Forward the WebSocket request to the appropriate endpoint
+    request.path_info = f'/ws/chat/{room_name}/'
+    return AsgiHandler()(request)

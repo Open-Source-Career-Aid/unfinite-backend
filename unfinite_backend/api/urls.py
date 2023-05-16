@@ -1,4 +1,6 @@
 from django.urls import path
+from django.urls import re_path
+from django.conf.urls import include
 
 from . import views
 
@@ -32,4 +34,5 @@ urlpatterns = [
     path('summarize_document_stream/', views.summarize_document_stream, name='api-summarize-document-stream'),
     path('get_recommendations/', views.get_recommendations, name='api-get-recommendations'),
     path('get_outline/', views.get_outline, name='api-get-outline'),
+    re_path(r'^ws/chat/(?P<room_name>\w+)/$', views.proxy_websocket_dochandler, name='api-proxy-websocket-dochandler'),
 ]

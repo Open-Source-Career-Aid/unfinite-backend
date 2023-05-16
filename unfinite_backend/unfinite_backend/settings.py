@@ -77,6 +77,8 @@ SESSION_COOKIE_SECURE = not DEBUG
 # Application definition
 
 INSTALLED_APPS = [
+    'channels',
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -87,8 +89,20 @@ INSTALLED_APPS = [
     'api',
     'queryhandler',
     'import_export',
-    'dochandler'
+    'dochandler',
 ]
+
+# Configure Channels as the default ASGI application
+ASGI_APPLICATION = 'unfinite_backend.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [('localhost', 6379)],
+        },
+    },
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -100,6 +114,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # 'channels.middleware.SessionMiddleware',
+    # 'channels.middleware.CorsMiddleware',
+    # 'channels.middleware.CsrfViewMiddleware',
 ]
 
 ROOT_URLCONF = 'unfinite_backend.urls'
@@ -122,6 +139,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                # anything related to websockets
+                'channels.context_processors.channel_headers',
             ],
         },
     },
